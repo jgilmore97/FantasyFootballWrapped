@@ -71,6 +71,14 @@ def load_league_data(year: int) -> League:
 
 def get_owner_name(team):
     """Safely extract owner name from team object."""
+
+    def _is_generic_display(name: str) -> bool:
+        """Detect placeholder names like ESPNFAN123456."""
+        if not name:
+            return False
+        upper = name.upper()
+        return upper.startswith('ESPNFAN') or upper.startswith('FANTASY MANAGER')
+
     def _normalize_owner(owner):
         """Convert various owner representations (dict/list/str) to a stable string."""
         if isinstance(owner, list):
@@ -78,15 +86,36 @@ def get_owner_name(team):
 
         if isinstance(owner, dict):
             # Try common keys exposed by the ESPN API
-            name = owner.get('displayName') or owner.get('nickname')
-            if not name:
-                first = owner.get('firstName')
-                last = owner.get('lastName')
-                if first or last:
-                    name = f"{first or ''} {last or ''}".strip()
+            display_name = owner.get('displayName') or owner.get('nickname')
 
-            # Fallback to any identifier or string representation
-            return name or owner.get('id') or str(owner)
+            # ESPN returns richer profile details alongside the default ESPNFAN label
+            # for leagues where managers never customized their public display name.
+            first = owner.get('firstName') or owner.get('first_name')
+            last = owner.get('lastName') or owner.get('last_name')
+            full_name = f"{first or ''} {last or ''}".strip()
+
+            # Some responses embed an additional profile dict (e.g., user/profile)
+            profile = owner.get('userProfile') or owner.get('user') or {}
+            if not full_name:
+                pf_first = profile.get('firstName') or profile.get('givenName')
+                pf_last = profile.get('lastName') or profile.get('familyName')
+                if pf_first or pf_last:
+                    full_name = f"{pf_first or ''} {pf_last or ''}".strip()
+
+            stable_id = owner.get('id') or profile.get('id') or profile.get('userId')
+
+            # Prefer a real name over the generic ESPNFAN string when available.
+            if full_name:
+                best = full_name
+            elif display_name and not _is_generic_display(display_name):
+                best = display_name
+            else:
+                best = display_name or 'Unknown'
+
+            # Append identifier to distinguish duplicate names and provide stability.
+            if stable_id and best != str(stable_id):
+                return f"{best} ({stable_id})"
+            return best or 'Unknown'
 
         # For primitive types (str/int/etc.) just coerce to string
         return str(owner) if owner is not None else 'Unknown'
