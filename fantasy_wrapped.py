@@ -71,15 +71,31 @@ def load_league_data(year: int) -> League:
 
 def get_owner_name(team):
     """Safely extract owner name from team object."""
+    def _normalize_owner(owner):
+        """Convert various owner representations (dict/list/str) to a stable string."""
+        if isinstance(owner, list):
+            return _normalize_owner(owner[0]) if owner else 'Unknown'
+
+        if isinstance(owner, dict):
+            # Try common keys exposed by the ESPN API
+            name = owner.get('displayName') or owner.get('nickname')
+            if not name:
+                first = owner.get('firstName')
+                last = owner.get('lastName')
+                if first or last:
+                    name = f"{first or ''} {last or ''}".strip()
+
+            # Fallback to any identifier or string representation
+            return name or owner.get('id') or str(owner)
+
+        # For primitive types (str/int/etc.) just coerce to string
+        return str(owner) if owner is not None else 'Unknown'
+
     # Handle both 'owner' (old API) and 'owners' (new API)
     if hasattr(team, 'owner'):
-        return team.owner
+        return _normalize_owner(team.owner)
     elif hasattr(team, 'owners'):
-        owners = team.owners
-        # owners might be a list or a string
-        if isinstance(owners, list):
-            return owners[0] if owners else 'Unknown'
-        return owners
+        return _normalize_owner(team.owners)
     return 'Unknown'
 
 
