@@ -47,7 +47,16 @@ STARTABLE_THRESHOLDS = {
     'K': 15,   # Top 15 Kickers
 }
 
-INJURY_STATUSES = ['OUT', 'IR', 'DOUBTFUL', 'SUSPENDED']
+INJURY_STATUSES = [
+    'OUT',
+    'IR',
+    'DOUBTFUL',
+    'SUSPENDED',
+    'QUESTIONABLE',
+    'INJURY_RESERVE',
+    'PUP',
+    'PUP-R'
+]
 
 # ========================================
 # DATA EXTRACTION
@@ -112,8 +121,8 @@ def get_owner_name(team):
             else:
                 best = display_name or 'Unknown'
 
-            # Append identifier to distinguish duplicate names and provide stability.
-            if stable_id and best != str(stable_id):
+            # Only surface the stable identifier when we have no meaningful name.
+            if _is_generic_display(best) and stable_id and best != str(stable_id):
                 return f"{best} ({stable_id})"
             return best or 'Unknown'
 
@@ -252,7 +261,10 @@ def count_injuries(lineup: List) -> Dict:
     injured_players = []
 
     for player in lineup:
-        if hasattr(player, 'injuryStatus') and player.injuryStatus in INJURY_STATUSES:
+        status = getattr(player, 'injuryStatus', None)
+        normalized_status = str(status).replace('-', '_').upper() if status else None
+
+        if normalized_status and normalized_status in INJURY_STATUSES:
             injury_count += 1
             if hasattr(player, 'name'):
                 player_name = player.name
@@ -397,6 +409,45 @@ def calculate_head_to_head_stats(matchups: List) -> Dict:
             h2h[away][home]['ties'] += 1
 
     return h2h
+
+
+def calculate_head_to_head_records(matchups: List) -> Dict:
+    """Backward-compatible wrapper that mirrors calculate_head_to_head_stats."""
+    return calculate_head_to_head_stats(matchups)
+
+
+def find_top_rivalries(h2h_stats: Dict, top_n: int = 5) -> List[Dict]:
+    """Identify the most competitive rivalries based on head-to-head history."""
+    rivalries = []
+
+    for team, opponents in h2h_stats.items():
+        for opponent, stats in opponents.items():
+            # Avoid duplicating pairings by enforcing an ordering
+            if team >= opponent or stats['games'] == 0:
+                continue
+
+            total_games = stats['games']
+            if total_games == 0:
+                continue
+
+            # Competitiveness: closer win/loss split and closer scoring margins are better
+            record_imbalance = abs(stats['wins'] - stats['losses']) / total_games
+            avg_margin = abs(stats['points_for'] - stats['points_against']) / total_games if total_games else 0
+            competitiveness = 1 - (record_imbalance * 0.6 + min(avg_margin, 50) / 50 * 0.4)
+
+            rivalry = {
+                'team1': team,
+                'team2': opponent,
+                'total_games': total_games,
+                'competitiveness': max(0, competitiveness),
+                'record': f"{stats['wins']}-{stats['losses']}-{stats['ties']}",
+                'points_for': stats['points_for'],
+                'points_against': stats['points_against'],
+            }
+            rivalries.append(rivalry)
+
+    rivalries.sort(key=lambda r: (r['competitiveness'], r['total_games']), reverse=True)
+    return rivalries[:top_n]
 
 
 def calculate_nemesis_and_victims(h2h_stats: Dict) -> Dict:
@@ -550,34 +601,47 @@ def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> List[Dict]:
         for pick in draft['picks']:
             player_name = pick['player_name']
 
-            if player_name in year_vor:
-                vor = year_vor[player_name]['vor']
-                points = year_vor[player_name]['points']
+            # Look at production in the draft year and all future years to reward longevity.
+            future_years = [
+                y for y in YEARS
+                if y >= year and y in vor_data and player_name in vor_data[y]
+            ]
 
-                # Calculate draft value score
-                # Earlier picks have higher cost, so we want high VOR relative to draft position
-                # For keepers (rounds 1-6), they have no cost advantage in this league
-                round_num = pick['round'] if pick['round'] else 1
-                is_keeper = pick['is_keeper']
+            if not future_years:
+                continue
 
-                # Value score: VOR divided by round number (later rounds = better value)
-                # For keepers, we still track but note they were kept
-                if round_num > 0:
-                    value_score = vor / round_num if not is_keeper else vor / 1
-                else:
-                    value_score = vor
+            total_future_vor = sum(vor_data[y][player_name]['vor'] for y in future_years)
+            avg_future_vor = total_future_vor / len(future_years)
+            draft_year_vor = year_vor[player_name]['vor'] if player_name in year_vor else 0
+            draft_year_points = year_vor[player_name]['points'] if player_name in year_vor else 0
 
-                best_picks.append({
-                    'year': year,
-                    'player': player_name,
-                    'round': round_num,
-                    'overall': pick['overall'],
-                    'vor': vor,
-                    'points': points,
-                    'is_keeper': is_keeper,
-                    'value_score': value_score,
-                    'team': get_owner_name(pick['team']) if pick['team'] else 'Unknown'
-                })
+            # Calculate draft value score
+            # Earlier picks have higher cost, so we want high VOR relative to draft position
+            # For keepers (rounds 1-6), they have no cost advantage in this league
+            round_num = pick['round'] if pick['round'] else 1
+            is_keeper = pick['is_keeper']
+
+            # Reward sustained value across seasons with a small longevity bonus.
+            longevity_bonus = 1 + 0.15 * (len(future_years) - 1)
+            if round_num > 0:
+                value_score = (total_future_vor * longevity_bonus) / (round_num if not is_keeper else 1)
+            else:
+                value_score = total_future_vor * longevity_bonus
+
+            best_picks.append({
+                'year': year,
+                'player': player_name,
+                'round': round_num,
+                'overall': pick['overall'],
+                'vor': total_future_vor,
+                'draft_year_vor': draft_year_vor,
+                'avg_future_vor': avg_future_vor,
+                'seasons_contributing': len(future_years),
+                'points': draft_year_points,
+                'is_keeper': is_keeper,
+                'value_score': value_score,
+                'team': get_owner_name(pick['team']) if pick['team'] else 'Unknown'
+            })
 
     # Sort by value score
     best_picks.sort(key=lambda x: x['value_score'], reverse=True)
@@ -1314,7 +1378,8 @@ def generate_report(all_data: Dict):
     non_keeper_picks = [p for p in best_picks if not p['is_keeper']][:10]
     for i, pick in enumerate(non_keeper_picks, 1):
         report.append(f"  {i:2d}. {pick['player']:25s} ({pick['year']}) - "
-                     f"Rd {pick['round']:2d} - VOR: {pick['vor']:6.2f} - "
+                     f"Rd {pick['round']:2d} - VOR since draft: {pick['vor']:6.2f} - "
+                     f"Seasons: {pick['seasons_contributing']:2d} - "
                      f"Value Score: {pick['value_score']:6.2f} - {pick['team']}")
     report.append("")
 
@@ -1325,7 +1390,8 @@ def generate_report(all_data: Dict):
         if year_picks:
             best = year_picks[0]
             report.append(f"  {year}: {best['player']:25s} - Rd {best['round']:2d} - "
-                         f"VOR: {best['vor']:6.2f} - {best['team']}")
+                         f"VOR since draft: {best['vor']:6.2f} - "
+                         f"Seasons: {best['seasons_contributing']:2d} - {best['team']}")
     report.append("")
 
     # Keeper Value
