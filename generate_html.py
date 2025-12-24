@@ -775,6 +775,430 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
     </section>
 """
 
+    # Full Rankings Section
+    rankings = data.get('rankings', {})
+
+    # Scoring Rankings
+    scoring_rankings = rankings.get('scoring', [])
+    if scoring_rankings:
+        html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">📊 COMPLETE SCORING RANKINGS</h2>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Team</th>
+                        <th>Total Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+        for entry in scoring_rankings:
+            badge_class = 'gold' if entry['rank'] == 1 else ('silver' if entry['rank'] == 2 else ('bronze' if entry['rank'] == 3 else ''))
+            html += f"""
+                    <tr>
+                        <td><span class="rank-badge {badge_class}">{entry['rank']}</span></td>
+                        <td style="font-weight: 700;">{entry['team']}</td>
+                        <td>{entry['total_points']:.2f}</td>
+                    </tr>
+"""
+        html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
+    # Win Percentage Rankings
+    win_pct_rankings = rankings.get('win_percentage', [])
+    if win_pct_rankings:
+        html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">🏅 COMPLETE WIN PERCENTAGE RANKINGS</h2>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Team</th>
+                        <th>Record</th>
+                        <th>Win %</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+        for entry in win_pct_rankings:
+            badge_class = 'gold' if entry['rank'] == 1 else ('silver' if entry['rank'] == 2 else ('bronze' if entry['rank'] == 3 else ''))
+            html += f"""
+                    <tr>
+                        <td><span class="rank-badge {badge_class}">{entry['rank']}</span></td>
+                        <td style="font-weight: 700;">{entry['team']}</td>
+                        <td>{entry['wins']}-{entry['losses']}-{entry['ties']}</td>
+                        <td style="color: {colors['gold']}; font-weight: 700;">{entry['win_percentage']:.1f}%</td>
+                    </tr>
+"""
+        html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
+    # Luck Rankings
+    luck_rankings = rankings.get('luck', [])
+    if luck_rankings:
+        html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">🍀 COMPLETE LUCK RANKINGS</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 30px; color: {colors['off_white']};">
+                Points Against (Lower = Luckier)
+            </p>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Team</th>
+                        <th>Points Against</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+        for entry in luck_rankings:
+            badge_class = 'gold' if entry['rank'] == 1 else ('silver' if entry['rank'] == 2 else ('bronze' if entry['rank'] == 3 else ''))
+            html += f"""
+                    <tr>
+                        <td><span class="rank-badge {badge_class}">{entry['rank']}</span></td>
+                        <td style="font-weight: 700;">{entry['team']}</td>
+                        <td>{entry['points_against']:.2f}</td>
+                    </tr>
+"""
+        html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
+    # Top 10 5-Year Total VOR
+    player_analysis = data.get('player_analysis', {})
+    top_5year_vor = player_analysis.get('top_5_year_total_vor', [])
+    if top_5year_vor:
+        html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">⭐ TOP 10 PLAYERS (5-Year Total VOR)</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 30px; color: {colors['off_white']};">
+                Most Valuable Players Across All Seasons
+            </p>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th>Position</th>
+                        <th>Total VOR</th>
+                        <th>Avg VOR</th>
+                        <th>Seasons</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+        for i, player in enumerate(top_5year_vor, 1):
+            badge_class = 'gold' if i == 1 else ('silver' if i == 2 else ('bronze' if i == 3 else ''))
+            html += f"""
+                    <tr>
+                        <td><span class="rank-badge {badge_class}">{i}</span></td>
+                        <td style="font-weight: 700;">{player.get('player', 'N/A')}</td>
+                        <td>{player.get('position', 'N/A')}</td>
+                        <td style="color: {colors['gold']}; font-weight: 700;">{player.get('total_vor', 0):.1f}</td>
+                        <td>{player.get('avg_vor', 0):.1f}</td>
+                        <td>{player.get('seasons_played', 0)}</td>
+                    </tr>
+"""
+        html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
+    # Top 10 5-Year Average VOR
+    top_5year_avg_vor = player_analysis.get('top_5_year_avg_vor', [])
+    if top_5year_avg_vor:
+        html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">💫 TOP 10 PLAYERS (5-Year Average VOR)</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 30px; color: {colors['off_white']};">
+                Most Consistent Elite Performers (Min. 2 Seasons)
+            </p>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th>Position</th>
+                        <th>Avg VOR</th>
+                        <th>Total VOR</th>
+                        <th>Seasons</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+        for i, player in enumerate(top_5year_avg_vor, 1):
+            badge_class = 'gold' if i == 1 else ('silver' if i == 2 else ('bronze' if i == 3 else ''))
+            html += f"""
+                    <tr>
+                        <td><span class="rank-badge {badge_class}">{i}</span></td>
+                        <td style="font-weight: 700;">{player.get('player', 'N/A')}</td>
+                        <td>{player.get('position', 'N/A')}</td>
+                        <td style="color: {colors['gold']}; font-weight: 700;">{player.get('avg_vor', 0):.1f}</td>
+                        <td>{player.get('total_vor', 0):.1f}</td>
+                        <td>{player.get('seasons_played', 0)}</td>
+                    </tr>
+"""
+        html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
+    # Nemesis and Victims
+    h2h_data = data.get('head_to_head', {})
+    nemesis_and_victims = h2h_data.get('nemesis_and_victims', {})
+    if nemesis_and_victims:
+        html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">⚔️ NEMESIS & VICTIMS</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 30px; color: {colors['off_white']};">
+                Who owns who in head-to-head matchups?
+            </p>
+"""
+        for manager in sorted(nemesis_and_victims.keys()):
+            data_entry = nemesis_and_victims[manager]
+            nemesis = data_entry.get('nemesis')
+            victim = data_entry.get('victim')
+
+            html += f"""
+            <div class="award-card">
+                <h3 style="color: {colors['gold']}; font-size: 1.5rem; margin-bottom: 20px;">{manager}</h3>
+"""
+            if nemesis:
+                html += f"""
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 1.2rem; font-weight: 700; color: {colors['red']};">👿 Nemesis: {nemesis.get('opponent', 'N/A')}</div>
+                    <div class="award-stats">
+                        They scored {nemesis.get('avg_points_against', 0):.1f} pts/game vs you
+                        ({nemesis.get('total_points_against', 0):.1f} total, {nemesis.get('games', 0)} games)<br>
+                        Your record: {nemesis.get('record', 'N/A')}
+                    </div>
+                </div>
+"""
+            if victim:
+                html += f"""
+                <div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: {colors['green']};">🏹 Victim: {victim.get('opponent', 'N/A')}</div>
+                    <div class="award-stats">
+                        You scored {victim.get('avg_points_for', 0):.1f} pts/game vs them
+                        ({victim.get('total_points_for', 0):.1f} total, {victim.get('games', 0)} games)<br>
+                        Your record: {victim.get('record', 'N/A')}
+                    </div>
+                </div>
+"""
+            html += """
+            </div>
+"""
+        html += """
+        </div>
+    </section>
+"""
+
+    # Full Injury Rankings
+    injury_rankings = injury_analysis.get('rankings', [])
+    if injury_rankings:
+        html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">🤕 COMPLETE INJURY RANKINGS</h2>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Team</th>
+                        <th>Total Injury-Weeks</th>
+                        <th>Max in One Week</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+        for entry in injury_rankings:
+            badge_class = 'gold' if entry['rank'] == 1 else ('silver' if entry['rank'] == 2 else ('bronze' if entry['rank'] == 3 else ''))
+            html += f"""
+                    <tr>
+                        <td><span class="rank-badge {badge_class}">{entry['rank']}</span></td>
+                        <td style="font-weight: 700;">{entry['team']}</td>
+                        <td>{entry['injury_weeks']}</td>
+                        <td>{entry['max_injuries_single_week']}</td>
+                    </tr>
+"""
+        html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
+    # Weighted Injury Impact
+    weighted_injury = injury_analysis.get('weighted_impact', [])
+    if weighted_injury:
+        html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">💸 WEIGHTED INJURY IMPACT</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 30px; color: {colors['off_white']};">
+                Draft Capital Weighted (Losing a 1st rounder hurts more)
+            </p>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Team</th>
+                        <th>Weighted Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+        for entry in weighted_injury:
+            badge_class = 'gold' if entry['rank'] == 1 else ('silver' if entry['rank'] == 2 else ('bronze' if entry['rank'] == 3 else ''))
+            html += f"""
+                    <tr>
+                        <td><span class="rank-badge {badge_class}">{entry['rank']}</span></td>
+                        <td style="font-weight: 700;">{entry['team']}</td>
+                        <td>{entry['weighted_score']:.0f}</td>
+                    </tr>
+"""
+        html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
+    # Keeper Value Rankings
+    if draft_analysis:
+        keeper_rankings = draft_analysis.get('keeper_value_rankings', [])
+        if keeper_rankings:
+            html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">📈 MOST VALUE FROM KEEPERS</h2>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Team</th>
+                        <th>Total Keeper VOR</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+            for entry in keeper_rankings:
+                badge_class = 'gold' if entry['rank'] == 1 else ('silver' if entry['rank'] == 2 else ('bronze' if entry['rank'] == 3 else ''))
+                html += f"""
+                    <tr>
+                        <td><span class="rank-badge {badge_class}">{entry['rank']}</span></td>
+                        <td style="font-weight: 700;">{entry['team']}</td>
+                        <td style="color: {colors['gold']}; font-weight: 700;">{entry['total_keeper_vor']:.2f}</td>
+                    </tr>
+"""
+            html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
+        # Draft Pick Value Rankings
+        draft_pick_rankings = draft_analysis.get('draft_pick_value_rankings', [])
+        if draft_pick_rankings:
+            html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">📊 MOST VALUE FROM DRAFT PICKS</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 30px; color: {colors['off_white']};">
+                Non-Keepers, 2022-2025
+            </p>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Team</th>
+                        <th>Total Draft Pick VOR</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+            for entry in draft_pick_rankings:
+                badge_class = 'gold' if entry['rank'] == 1 else ('silver' if entry['rank'] == 2 else ('bronze' if entry['rank'] == 3 else ''))
+                html += f"""
+                    <tr>
+                        <td><span class="rank-badge {badge_class}">{entry['rank']}</span></td>
+                        <td style="font-weight: 700;">{entry['team']}</td>
+                        <td style="color: {colors['gold']}; font-weight: 700;">{entry['total_draft_pick_vor']:.2f}</td>
+                    </tr>
+"""
+            html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
+        # Best Draft Pick By Year
+        best_pick_by_year = draft_analysis.get('best_pick_by_year', [])
+        if best_pick_by_year:
+            html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">🎯 BEST DRAFT PICK BY YEAR</h2>
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th>Player</th>
+                        <th>Round</th>
+                        <th>VOR</th>
+                        <th>Δ vs Round</th>
+                        <th>Seasons</th>
+                        <th>Team</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+            for entry in best_pick_by_year:
+                html += f"""
+                    <tr>
+                        <td style="font-weight: 700; color: {colors['gold']};">{entry['year']}</td>
+                        <td style="font-weight: 700;">{entry['player']}</td>
+                        <td>Rd {entry['round']}</td>
+                        <td>{entry['vor']:.1f}</td>
+                        <td style="color: {colors['gold']}; font-weight: 700;">+{entry['delta_vs_round']:.1f}</td>
+                        <td>{entry['seasons_contributing']}</td>
+                        <td>{entry['team']}</td>
+                    </tr>
+"""
+            html += """
+                </tbody>
+            </table>
+        </div>
+    </section>
+"""
+
     # Footer
     generated_at = data.get('generated_at', datetime.now().isoformat())
     html += f"""
