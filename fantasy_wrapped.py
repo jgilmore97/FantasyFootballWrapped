@@ -1949,7 +1949,8 @@ def download_top_player_headshots(top_players: List[Dict]) -> Dict[str, Image]:
 
 def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = None,
                          mvp_info: Dict = None, mvp_headshot: Image = None,
-                         top_players: List[Dict] = None, player_headshots: Dict[str, Image] = None):
+                         top_players: List[Dict] = None, player_headshots: Dict[str, Image] = None,
+                         mvp_5year_info: Dict = None, mvp_5year_headshot: Image = None):
     """Generate individual beautified visualization charts."""
     team_stats = all_data['team_stats']
 
@@ -2089,6 +2090,44 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
     plt.savefig('mvp_panel.png', dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
     print("  ✓ mvp_panel.png")
+
+    # ========================================
+    # 3b. 5-Year Total VOR MVP Panel
+    # ========================================
+    if mvp_5year_info:
+        fig, ax = plt.subplots(figsize=(10, 10), facecolor='white')
+        ax.axis('off')
+
+        # Create beautiful 5-year MVP card
+        mvp_5year_text = "🏆 5-YEAR TOTAL VOR MVP 🏆\n\n"
+        mvp_5year_text += f"{mvp_5year_info['player']}\n"
+        years_str = ', '.join(str(y) for y in mvp_5year_info['years'])
+        mvp_5year_text += f"{mvp_5year_info['seasons_played']} Seasons ({years_str})\n\n"
+        mvp_5year_text += f"Position: {mvp_5year_info['position']}\n"
+        mvp_5year_text += f"Total VOR: {mvp_5year_info['total_vor']:.1f}\n"
+        mvp_5year_text += f"Average VOR/Season: {mvp_5year_info['avg_vor']:.1f}"
+
+        if mvp_5year_headshot:
+            # Display headshot at top center
+            img_ax = fig.add_axes([0.3, 0.55, 0.4, 0.4])
+            img_ax.imshow(mvp_5year_headshot)
+            img_ax.axis('off')
+
+            # Text below headshot with different color scheme (platinum/silver theme for 5-year dominance)
+            ax.text(0.5, 0.4, mvp_5year_text, transform=ax.transAxes,
+                    fontsize=14, ha='center', va='top',
+                    bbox=dict(boxstyle='round,pad=1', facecolor='#E8E8E8', alpha=0.9, edgecolor='#4A4A4A', linewidth=3),
+                    family='monospace', fontweight='bold', linespacing=1.8)
+        else:
+            # No headshot, centered text
+            ax.text(0.5, 0.5, mvp_5year_text, transform=ax.transAxes,
+                    fontsize=16, ha='center', va='center',
+                    bbox=dict(boxstyle='round,pad=1.5', facecolor='#E8E8E8', alpha=0.9, edgecolor='#4A4A4A', linewidth=3),
+                    family='monospace', fontweight='bold', linespacing=1.8)
+
+        plt.savefig('mvp_5year.png', dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close()
+        print("  ✓ mvp_5year.png")
 
     # ========================================
     # 4. Luck Analysis (Points For vs Against)
@@ -2437,6 +2476,7 @@ def save_comprehensive_json(all_data: Dict, vor_data: Dict) -> None:
         # ========================================
         # PLAYER ANALYSIS
         # ========================================
+        # Single-Season MVP
         mvp, mvp_year, mvp_info = find_most_valuable_player(vor_data)
         payload['player_analysis']['mvp_single_season'] = {
             'player': mvp,
@@ -2447,7 +2487,20 @@ def save_comprehensive_json(all_data: Dict, vor_data: Dict) -> None:
             'team': mvp_info['owner']
         }
 
+        # 5-Year Total VOR MVP (Most Important)
         total_vor_rankings, avg_vor_rankings = calculate_five_year_vor(vor_data)
+        if total_vor_rankings:
+            mvp_5year = total_vor_rankings[0]
+            payload['player_analysis']['mvp_5year_total_vor'] = {
+                'player': mvp_5year['player'],
+                'total_vor': mvp_5year['total_vor'],
+                'avg_vor': mvp_5year['avg_vor'],
+                'seasons_played': mvp_5year['seasons_played'],
+                'years': mvp_5year['years'],
+                'position': mvp_5year['position']
+            }
+
+        # Full rankings
         payload['player_analysis']['top_5_year_total_vor'] = total_vor_rankings[:10]
         payload['player_analysis']['top_5_year_avg_vor'] = [
             p for p in avg_vor_rankings if p['seasons_played'] >= 2
@@ -2996,20 +3049,39 @@ def main():
     print("Phase 1: Extracting league data...")
     all_data = extract_all_data()
 
-    # Calculate VOR and find MVP
+    # Calculate VOR and find MVPs
     print("\nPhase 2: Calculating player values and downloading player headshots...")
     vor_data = calculate_value_over_replacement(all_data)
+
+    # Single-season MVP
     mvp_name, mvp_year, mvp_info = find_most_valuable_player(vor_data)
 
-    # Download MVP headshot
+    # Download single-season MVP headshot
     mvp_headshot = None
     if mvp_name and mvp_info and mvp_info.get('player_id'):
-        print(f"  Found MVP: {mvp_name} ({mvp_year})")
+        print(f"  Found Single-Season MVP: {mvp_name} ({mvp_year})")
         mvp_headshot = download_player_headshot(
             mvp_info['player_id'],
             mvp_name,
             save_path='mvp_headshot.png'
         )
+
+    # 5-Year Total VOR MVP
+    total_vor_rankings, avg_vor_rankings = calculate_five_year_vor(vor_data)
+    mvp_5year_info = None
+    mvp_5year_headshot = None
+    if total_vor_rankings:
+        mvp_5year_info = total_vor_rankings[0]
+        print(f"  Found 5-Year Total VOR MVP: {mvp_5year_info['player']} "
+              f"({mvp_5year_info['total_vor']:.1f} VOR over {mvp_5year_info['seasons_played']} seasons)")
+
+        # Download 5-year MVP headshot
+        if mvp_5year_info.get('player_id'):
+            mvp_5year_headshot = download_player_headshot(
+                mvp_5year_info['player_id'],
+                mvp_5year_info['player'],
+                save_path='mvp_5year_headshot.png'
+            )
 
     # Get top 10 player seasons and download their headshots
     print("  Finding top player seasons...")
@@ -3020,16 +3092,18 @@ def main():
 
     print("\nPhase 3: Generating visualizations...")
     create_visualizations(all_data, mvp_name, mvp_year, mvp_info, mvp_headshot,
-                         top_players, player_headshots)
+                         top_players, player_headshots, mvp_5year_info, mvp_5year_headshot)
 
     print("\nPhase 4: Generating comprehensive report...")
     generate_report(all_data)
 
     print("\n" + "=" * 80)
     print(" Analysis Complete!".center(80))
-    print(" Check fantasy_wrapped_report.txt and fantasy_wrapped_charts.png".center(80))
+    print(" Check fantasy_wrapped_report.txt and individual PNG visualizations".center(80))
     if mvp_headshot:
-        print(" MVP headshot saved to mvp_headshot.png".center(80))
+        print(" Single-Season MVP: mvp_panel.png".center(80))
+    if mvp_5year_headshot:
+        print(" 5-Year Total VOR MVP: mvp_5year.png".center(80))
     print("=" * 80)
 
 

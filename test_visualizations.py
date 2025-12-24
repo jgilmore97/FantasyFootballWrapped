@@ -140,7 +140,18 @@ def test_visualizations():
 
     all_data, vor_data, mvp_name, mvp_year, mvp_info, top_players = create_mock_data()
 
-    print("\n1. Testing individual PNG generation...")
+    # Create 5-year MVP info
+    mvp_5year_info = {
+        'player': 'Christian McCaffrey',
+        'total_vor': 850.3,
+        'avg_vor': 212.6,
+        'seasons_played': 4,
+        'years': [2021, 2022, 2023, 2024],
+        'position': 'RB',
+        'player_id': None
+    }
+
+    print("\n1. Testing individual PNG generation (including 5-year MVP)...")
     try:
         create_visualizations(
             all_data,
@@ -149,7 +160,9 @@ def test_visualizations():
             mvp_info=mvp_info,
             mvp_headshot=None,
             top_players=top_players,
-            player_headshots={}
+            player_headshots={},
+            mvp_5year_info=mvp_5year_info,
+            mvp_5year_headshot=None
         )
         print("✅ Visualization test completed!")
     except Exception as e:
@@ -173,6 +186,7 @@ def test_visualizations():
         'total_points.png',
         'win_percentage.png',
         'mvp_panel.png',
+        'mvp_5year.png',
         'luck_analysis.png',
         'championships.png'
     ]
