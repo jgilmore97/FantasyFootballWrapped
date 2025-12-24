@@ -1057,7 +1057,7 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
                         if wins > losses:
                             cell_color = colors['green']
                         elif wins < losses:
-                            cell_color = colors['red']
+                            cell_color = colors['orange']
                         else:
                             cell_color = colors['off_white']
 
