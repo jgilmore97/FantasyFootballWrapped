@@ -769,59 +769,60 @@ def calculate_value_over_replacement(all_data: Dict) -> Dict:
     return vor_data
 
 
+def build_player_owner_shares(all_data: Dict) -> Dict[int, Dict[str, Dict[str, float]]]:
+    """Estimate how much of each season's value belonged to each owner."""
+
+    shares_by_year: Dict[int, Dict[str, Dict[str, float]]] = defaultdict(dict)
+
+    for year in YEARS:
+        week_rosters = all_data['weekly_rosters'].get(year, {})
+        player_weeks: Dict[str, Counter] = defaultdict(Counter)
+        max_week_seen = 0
+
+        for week, rosters in week_rosters.items():
+            max_week_seen = max(max_week_seen, week)
+            for owner, roster in rosters.items():
+                for player_key in roster:
+                    player_weeks[player_key][owner] += 1
+
+        total_weeks = all_data['season_weeks'].get(year, 0)
+        # Use observed data if configured total weeks is missing
+        total_weeks = max(total_weeks, max_week_seen)
+
+        if total_weeks == 0:
+            total_weeks = 1  # Avoid division by zero; will fall back to season owner mapping below
+
+        for player_key, owner_counts in player_weeks.items():
+            shares_by_year[year][player_key] = {
+                owner: owner_count / total_weeks
+                for owner, owner_count in owner_counts.items()
+                if total_weeks > 0
+            }
+
+        # Fallback: if we have no weekly roster data for a player, attribute the
+        # full season to the roster owner recorded in player_seasons.
+        for player_key, seasons in all_data['player_seasons'].items():
+            if year in seasons and player_key not in shares_by_year[year]:
+                owner = seasons[year].get('team_owner')
+                if owner:
+                    shares_by_year[year][player_key] = {owner: 1.0}
+
+    return shares_by_year
+
+
 def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> Tuple[List[Dict], Dict[int, Dict[int, float]]]:
     """
     Find the best draft picks by comparing VOR to round average.
-    
+
     Returns:
         Tuple of (best_picks list, round_averages_by_year dict)
-        
+
     The value_score is calculated as delta vs round average - how much better
     a pick performed compared to other players drafted in the same round that year.
     This properly rewards late-round steals over early-round picks that merely
     met expectations.
     """
-    def build_player_owner_shares() -> Dict[int, Dict[str, Dict[str, float]]]:
-        """Estimate how much of each season's value belonged to each owner."""
-
-        shares_by_year: Dict[int, Dict[str, Dict[str, float]]] = defaultdict(dict)
-
-        for year in YEARS:
-            week_rosters = all_data['weekly_rosters'].get(year, {})
-            player_weeks: Dict[str, Counter] = defaultdict(Counter)
-            max_week_seen = 0
-
-            for week, rosters in week_rosters.items():
-                max_week_seen = max(max_week_seen, week)
-                for owner, roster in rosters.items():
-                    for player_key in roster:
-                        player_weeks[player_key][owner] += 1
-
-            total_weeks = all_data['season_weeks'].get(year, 0)
-            # Use observed data if configured total weeks is missing
-            total_weeks = max(total_weeks, max_week_seen)
-
-            if total_weeks == 0:
-                total_weeks = 1  # Avoid division by zero; will fall back to season owner mapping below
-
-            for player_key, owner_counts in player_weeks.items():
-                shares_by_year[year][player_key] = {
-                    owner: owner_count / total_weeks
-                    for owner, owner_count in owner_counts.items()
-                    if total_weeks > 0
-                }
-
-            # Fallback: if we have no weekly roster data for a player, attribute the
-            # full season to the roster owner recorded in player_seasons.
-            for player_key, seasons in all_data['player_seasons'].items():
-                if year in seasons and player_key not in shares_by_year[year]:
-                    owner = seasons[year].get('team_owner')
-                    if owner:
-                        shares_by_year[year][player_key] = {owner: 1.0}
-
-        return shares_by_year
-
-    owner_shares_by_year = build_player_owner_shares()
+    owner_shares_by_year = build_player_owner_shares(all_data)
 
     # First pass: collect all picks with their VOR data
     all_picks = []
@@ -956,8 +957,16 @@ def calculate_keeper_value(all_data: Dict, vor_data: Dict) -> Dict[str, float]:
 
 
 def calculate_draft_pick_value(all_data: Dict, vor_data: Dict) -> Dict[str, float]:
-    """Calculate total non-keeper draft pick value for each manager."""
+    """Calculate total non-keeper draft pick value for each manager.
+
+    Attribution mirrors the tenure-based best-pick logic but only counts the
+    draft-year value for non-keeper selections. If a player is later kept, the
+    keeper-year VOR is excluded from this leaderboard; only the draft-year
+    production that occurred while the drafting owner rostered the player is
+    credited.
+    """
     draft_values = defaultdict(float)
+    owner_shares_by_year = build_player_owner_shares(all_data)
 
     for year in YEARS:
         if year not in all_data['draft_data'] or year not in vor_data:
@@ -971,14 +980,26 @@ def calculate_draft_pick_value(all_data: Dict, vor_data: Dict) -> Dict[str, floa
         year_vor = vor_data[year]
 
         for pick in draft['picks']:
-            if not pick['is_keeper']:
-                # Use player_key for lookup (matches VOR data keys)
-                player_key = pick.get('player_key', pick['player_name'])
-                if player_key in year_vor:
-                    vor = year_vor[player_key]['vor']
-                    if pick['team']:
-                        owner = get_owner_name(pick['team'])
-                        draft_values[owner] += vor
+            if pick['is_keeper']:
+                continue
+
+            # Use player_key for lookup (matches VOR data keys)
+            player_key = pick.get('player_key', pick['player_name'])
+            if player_key not in year_vor:
+                continue
+
+            if not pick['team']:
+                continue
+
+            owner = get_owner_name(pick['team'])
+            owner_shares = owner_shares_by_year.get(year, {}).get(player_key, {})
+            share = owner_shares.get(owner, 0.0)
+
+            if share <= 0:
+                continue
+
+            vor = year_vor[player_key]['vor'] * share
+            draft_values[owner] += vor
 
     return draft_values
 
