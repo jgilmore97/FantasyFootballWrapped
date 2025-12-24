@@ -200,10 +200,18 @@ def get_owner_name(team):
 
     # Handle both 'owner' (old API) and 'owners' (new API)
     if hasattr(team, 'owner'):
-        return _normalize_owner(team.owner)
+        owner_name = _normalize_owner(team.owner)
     elif hasattr(team, 'owners'):
-        return _normalize_owner(team.owners)
-    return 'Unknown'
+        owner_name = _normalize_owner(team.owners)
+    else:
+        owner_name = 'Unknown'
+
+    # Custom name mappings (e.g., for managers who changed mid-season)
+    name_mappings = {
+        'Nadia Moumine': 'Nadia/Zoe'
+    }
+
+    return name_mappings.get(owner_name, owner_name)
 
 
 def extract_all_data():
@@ -1949,8 +1957,9 @@ def download_top_player_headshots(top_players: List[Dict]) -> Dict[str, Image]:
 
 def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = None,
                          mvp_info: Dict = None, mvp_headshot: Image = None,
-                         top_players: List[Dict] = None, player_headshots: Dict[str, Image] = None):
-    """Generate all visualization charts including MVP and top player headshots."""
+                         top_players: List[Dict] = None, player_headshots: Dict[str, Image] = None,
+                         mvp_5year_info: Dict = None, mvp_5year_headshot: Image = None):
+    """Generate individual beautified visualization charts."""
     team_stats = all_data['team_stats']
 
     # Check if we have any data
@@ -1962,12 +1971,14 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
     teams = []
     total_points = []
     win_pcts = []
+    points_for = []
     points_against = []
     championships = []
 
     for team, stats in sorted(team_stats.items(), key=lambda x: x[1]['total_points_for'], reverse=True):
         teams.append(team)
         total_points.append(stats['total_points_for'])
+        points_for.append(stats['total_points_for'])
         points_against.append(stats['total_points_against'])
 
         total_games = stats['wins'] + stats['losses'] + stats['ties']
@@ -1976,47 +1987,89 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
 
         championships.append(stats['championships'])
 
-    # Create figure with subplots (3 rows, 3 columns to accommodate Hall of Fame)
-    fig = plt.figure(figsize=(20, 16))
+    # Common styling parameters
+    BRAND_COLORS = {
+        'primary': '#1f77b4',    # Professional blue
+        'secondary': '#ff7f0e',  # Orange accent
+        'success': '#2ca02c',    # Green
+        'warning': '#d62728',    # Red
+        'gold': '#FFD700',       # Gold for championships
+    }
 
-    # 1. Total Points Scored (horizontal bar)
-    ax1 = plt.subplot(2, 3, 1)
-    colors1 = plt.cm.viridis(np.linspace(0.3, 0.9, len(teams)))
-    bars1 = ax1.barh(range(len(teams)), total_points, color=colors1)
-    ax1.set_yticks(range(len(teams)))
-    ax1.set_yticklabels(teams, fontsize=9)
-    ax1.set_xlabel('Total Points', fontsize=10, fontweight='bold')
-    ax1.set_title('All-Time Points Scored (2021-2025)', fontsize=12, fontweight='bold', pad=10)
-    ax1.invert_yaxis()
+    FONT_TITLE = {'fontsize': 16, 'fontweight': 'bold', 'fontfamily': 'sans-serif'}
+    FONT_LABEL = {'fontsize': 12, 'fontweight': 'bold'}
+    FONT_TICK = {'fontsize': 10}
 
-    # Add value labels
-    for i, (bar, val) in enumerate(zip(bars1, total_points)):
-        ax1.text(val + 20, i, f'{val:.0f}', va='center', fontsize=8)
+    print("\n📊 Generating individual visualization PNGs...")
 
+    # ========================================
+    # 1. Total Points Scored
+    # ========================================
+    fig, ax = plt.subplots(figsize=(12, 8), facecolor='white')
+
+    # Create gradient colors from light to dark blue
+    colors = plt.cm.Blues(np.linspace(0.5, 0.9, len(teams)))
+    bars = ax.barh(range(len(teams)), total_points, color=colors, edgecolor='navy', linewidth=1.5)
+
+    ax.set_yticks(range(len(teams)))
+    ax.set_yticklabels(teams, **FONT_TICK)
+    ax.set_xlabel('Total Points', **FONT_LABEL)
+    ax.set_title('All-Time Points Scored (2021-2025)', **FONT_TITLE, pad=20)
+    ax.invert_yaxis()
+    ax.grid(axis='x', alpha=0.3, linestyle='--')
+    ax.set_axisbelow(True)
+
+    # Add value labels on bars
+    for i, (bar, val) in enumerate(zip(bars, total_points)):
+        ax.text(val - 100, i, f'{val:.0f}', va='center', ha='right',
+                fontsize=10, fontweight='bold', color='white')
+
+    plt.tight_layout()
+    plt.savefig('total_points.png', dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close()
+    print("  ✓ total_points.png")
+
+    # ========================================
     # 2. Win Percentage
-    ax2 = plt.subplot(2, 3, 2)
+    # ========================================
+    fig, ax = plt.subplots(figsize=(12, 8), facecolor='white')
+
     teams_sorted_wins = sorted(zip(teams, win_pcts), key=lambda x: x[1], reverse=True)
     teams_w = [t[0] for t in teams_sorted_wins]
     pcts_w = [t[1] for t in teams_sorted_wins]
-    colors2 = plt.cm.RdYlGn(np.linspace(0.3, 0.9, len(teams_w)))
-    bars2 = ax2.barh(range(len(teams_w)), pcts_w, color=colors2)
-    ax2.set_yticks(range(len(teams_w)))
-    ax2.set_yticklabels(teams_w, fontsize=9)
-    ax2.set_xlabel('Win Percentage', fontsize=10, fontweight='bold')
-    ax2.set_title('All-Time Win Percentage', fontsize=12, fontweight='bold', pad=10)
-    ax2.invert_yaxis()
-    ax2.set_xlim(0, 100)
 
-    for i, (bar, val) in enumerate(zip(bars2, pcts_w)):
-        ax2.text(val + 1, i, f'{val:.1f}%', va='center', fontsize=8)
+    # Color gradient from red (low) to green (high)
+    colors = plt.cm.RdYlGn(np.linspace(0.3, 0.9, len(teams_w)))
+    bars = ax.barh(range(len(teams_w)), pcts_w, color=colors, edgecolor='black', linewidth=1.5)
 
+    ax.set_yticks(range(len(teams_w)))
+    ax.set_yticklabels(teams_w, **FONT_TICK)
+    ax.set_xlabel('Win Percentage (%)', **FONT_LABEL)
+    ax.set_title('All-Time Win Percentage', **FONT_TITLE, pad=20)
+    ax.invert_yaxis()
+    ax.set_xlim(0, 100)
+    ax.grid(axis='x', alpha=0.3, linestyle='--')
+    ax.set_axisbelow(True)
+
+    # Add percentage labels
+    for i, (bar, val) in enumerate(zip(bars, pcts_w)):
+        ax.text(val - 2, i, f'{val:.1f}%', va='center', ha='right',
+                fontsize=10, fontweight='bold', color='white')
+
+    plt.tight_layout()
+    plt.savefig('win_percentage.png', dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close()
+    print("  ✓ win_percentage.png")
+
+    # ========================================
     # 3. MVP Panel with Headshot
-    ax3 = plt.subplot(2, 3, 3)
-    ax3.axis('off')
+    # ========================================
+    fig, ax = plt.subplots(figsize=(10, 10), facecolor='white')
+    ax.axis('off')
 
     if mvp_name and mvp_info:
-        # Display MVP information
-        mvp_text = f"MOST VALUABLE PLAYER\n\n"
+        # Create beautiful MVP card
+        mvp_text = "🏅 MOST VALUABLE PLAYER 🏅\n\n"
         mvp_text += f"{mvp_name}\n"
         mvp_text += f"{mvp_year} Season\n\n"
         mvp_text += f"Position: {mvp_info['position']}\n"
@@ -2024,72 +2077,107 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
         mvp_text += f"Value Over Replacement: {mvp_info['vor']:.1f}\n"
         mvp_text += f"Team: {mvp_info['owner']}"
 
-        # Add MVP headshot if available
         if mvp_headshot:
-            # Create space for headshot at top
-            ax3.text(0.5, 0.35, mvp_text, transform=ax3.transAxes,
-                    fontsize=11, ha='center', va='top',
-                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3),
-                    family='monospace', fontweight='bold')
-
-            # Display headshot
-            img_ax = fig.add_axes([0.7, 0.62, 0.15, 0.25])
+            # Display headshot at top center
+            img_ax = fig.add_axes([0.3, 0.55, 0.4, 0.4])
             img_ax.imshow(mvp_headshot)
             img_ax.axis('off')
+
+            # Text below headshot
+            ax.text(0.5, 0.4, mvp_text, transform=ax.transAxes,
+                    fontsize=14, ha='center', va='top',
+                    bbox=dict(boxstyle='round,pad=1', facecolor='gold', alpha=0.7, edgecolor='darkgoldenrod', linewidth=3),
+                    family='monospace', fontweight='bold', linespacing=1.8)
         else:
-            # No headshot, just show text centered
-            ax3.text(0.5, 0.5, mvp_text, transform=ax3.transAxes,
-                    fontsize=12, ha='center', va='center',
-                    bbox=dict(boxstyle='round', facecolor='gold', alpha=0.5),
-                    family='monospace', fontweight='bold')
+            # No headshot, centered text
+            ax.text(0.5, 0.5, mvp_text, transform=ax.transAxes,
+                    fontsize=16, ha='center', va='center',
+                    bbox=dict(boxstyle='round,pad=1.5', facecolor='gold', alpha=0.8, edgecolor='darkgoldenrod', linewidth=3),
+                    family='monospace', fontweight='bold', linespacing=1.8)
 
-    # 4. Luck Analysis (scatter plot)
-    ax4 = plt.subplot(2, 3, 4)
-    scatter = ax4.scatter(total_points, points_against, c=win_pcts, cmap='RdYlGn',
-                         s=200, alpha=0.7, edgecolors='black', linewidth=1.5)
+    plt.savefig('mvp_panel.png', dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close()
+    print("  ✓ mvp_panel.png")
 
+    # ========================================
+    # 3b. 5-Year Total VOR MVP Panel
+    # ========================================
+    if mvp_5year_info:
+        fig, ax = plt.subplots(figsize=(10, 10), facecolor='white')
+        ax.axis('off')
+
+        # Create beautiful 5-year MVP card
+        mvp_5year_text = "🏆 5-YEAR TOTAL VOR MVP 🏆\n\n"
+        mvp_5year_text += f"{mvp_5year_info['player']}\n"
+        years_str = ', '.join(str(y) for y in mvp_5year_info['years'])
+        mvp_5year_text += f"{mvp_5year_info['seasons_played']} Seasons ({years_str})\n\n"
+        mvp_5year_text += f"Position: {mvp_5year_info['position']}\n"
+        mvp_5year_text += f"Total VOR: {mvp_5year_info['total_vor']:.1f}\n"
+        mvp_5year_text += f"Average VOR/Season: {mvp_5year_info['avg_vor']:.1f}"
+
+        if mvp_5year_headshot:
+            # Display headshot at top center
+            img_ax = fig.add_axes([0.3, 0.55, 0.4, 0.4])
+            img_ax.imshow(mvp_5year_headshot)
+            img_ax.axis('off')
+
+            # Text below headshot with different color scheme (platinum/silver theme for 5-year dominance)
+            ax.text(0.5, 0.4, mvp_5year_text, transform=ax.transAxes,
+                    fontsize=14, ha='center', va='top',
+                    bbox=dict(boxstyle='round,pad=1', facecolor='#E8E8E8', alpha=0.9, edgecolor='#4A4A4A', linewidth=3),
+                    family='monospace', fontweight='bold', linespacing=1.8)
+        else:
+            # No headshot, centered text
+            ax.text(0.5, 0.5, mvp_5year_text, transform=ax.transAxes,
+                    fontsize=16, ha='center', va='center',
+                    bbox=dict(boxstyle='round,pad=1.5', facecolor='#E8E8E8', alpha=0.9, edgecolor='#4A4A4A', linewidth=3),
+                    family='monospace', fontweight='bold', linespacing=1.8)
+
+        plt.savefig('mvp_5year.png', dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close()
+        print("  ✓ mvp_5year.png")
+
+    # ========================================
+    # 4. Luck Analysis (Points For vs Against)
+    # ========================================
+    fig, ax = plt.subplots(figsize=(12, 10), facecolor='white')
+
+    scatter = ax.scatter(points_for, points_against, c=win_pcts, cmap='RdYlGn',
+                        s=300, alpha=0.8, edgecolors='black', linewidth=2)
+
+    # Add team labels
     for i, team in enumerate(teams):
-        ax4.annotate(team, (total_points[i], points_against[i]),
-                    fontsize=7, ha='center', va='bottom')
+        ax.annotate(team, (points_for[i], points_against[i]),
+                   fontsize=9, ha='center', va='bottom', fontweight='bold',
+                   bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7, edgecolor='gray'))
 
-    ax4.set_xlabel('Points For', fontsize=10, fontweight='bold')
-    ax4.set_ylabel('Points Against', fontsize=10, fontweight='bold')
-    ax4.set_title('Luck Analysis: Points For vs Against', fontsize=12, fontweight='bold', pad=10)
-    ax4.grid(True, alpha=0.3)
+    ax.set_xlabel('Points For', **FONT_LABEL)
+    ax.set_ylabel('Points Against', **FONT_LABEL)
+    ax.set_title('Luck Analysis: Points For vs Against', **FONT_TITLE, pad=20)
+    ax.grid(True, alpha=0.3, linestyle='--')
+    ax.set_axisbelow(True)
 
-    # Add colorbar
-    cbar = plt.colorbar(scatter, ax=ax4)
-    cbar.set_label('Win %', fontsize=9)
+    # Add colorbar with label
+    cbar = plt.colorbar(scatter, ax=ax)
+    cbar.set_label('Win Percentage (%)', fontsize=11, fontweight='bold')
 
-    # 5. Championships
-    ax5 = plt.subplot(2, 3, 5)
-    x = np.arange(len(teams))
+    plt.tight_layout()
+    plt.savefig('luck_analysis.png', dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close()
+    print("  ✓ luck_analysis.png")
 
-    bars_champ = ax5.bar(x, championships, label='Championships',
-                        color='gold', edgecolor='black', linewidth=1.5)
-
-    ax5.set_ylabel('Count', fontsize=10, fontweight='bold')
-    ax5.set_title('Championships', fontsize=12, fontweight='bold', pad=10)
-    ax5.set_xticks(x)
-    ax5.set_xticklabels(teams, rotation=45, ha='right', fontsize=8)
-    ax5.grid(True, axis='y', alpha=0.3)
-
-    # Add value labels
-    for bar in bars_champ:
-        height = bar.get_height()
-        if height > 0:
-            ax5.text(bar.get_x() + bar.get_width()/2., height,
-                    f'{int(height)}', ha='center', va='bottom', fontsize=8)
-
-    # 6. Hall of Fame - Top Player Seasons (spans bottom row)
+    # ========================================
+    # 5. Hall of Fame - Top Player Seasons
+    # ========================================
     if top_players and player_headshots:
-        # Create a large subplot spanning the bottom row
-        ax6 = plt.subplot(3, 1, 3)
-        ax6.axis('off')
-        ax6.set_title('HALL OF FAME - Top 10 Most Valuable Seasons',
-                     fontsize=14, fontweight='bold', pad=20)
+        fig = plt.figure(figsize=(18, 12), facecolor='white')
+        ax_main = fig.add_subplot(111)
+        ax_main.axis('off')
 
-        # Display top players with headshots in a grid
+        # Title
+        fig.suptitle('🏛️ HALL OF FAME - Top 10 Most Valuable Seasons 🏛️',
+                    fontsize=20, fontweight='bold', y=0.98)
+
         num_players = min(10, len(top_players))
         cols = 5
         rows = 2
@@ -2102,52 +2190,69 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
             col = idx % cols
 
             # Create subplot for each player
-            # Position: [left, bottom, width, height]
             left = 0.05 + col * 0.19
-            bottom = 0.12 - row * 0.10
-            width = 0.15
-            height = 0.08
+            bottom = 0.55 - row * 0.45
+            width = 0.16
+            height = 0.38
 
             player_ax = fig.add_axes([left, bottom, width, height])
             player_ax.axis('off')
 
+            # Add rank badge
+            rank_colors = ['#FFD700', '#C0C0C0', '#CD7F32']  # Gold, Silver, Bronze
+            rank_color = rank_colors[idx] if idx < 3 else '#4A90E2'
+
             # Add headshot if available
             if player_name in player_headshots:
                 img = player_headshots[player_name]
-                # Create smaller inset for headshot
-                img_ax = fig.add_axes([left, bottom + 0.04, 0.05, 0.04])
+                img_ax = fig.add_axes([left + 0.03, bottom + 0.20, 0.10, 0.15])
                 img_ax.imshow(img)
                 img_ax.axis('off')
 
-                # Add player info next to headshot
+                # Rank badge
+                rank_ax = fig.add_axes([left + 0.01, bottom + 0.32, 0.04, 0.04])
+                rank_ax.add_patch(plt.Circle((0.5, 0.5), 0.4, color=rank_color, transform=rank_ax.transAxes))
+                rank_ax.text(0.5, 0.5, f"#{idx+1}", transform=rank_ax.transAxes,
+                           ha='center', va='center', fontsize=10, fontweight='bold', color='white')
+                rank_ax.set_xlim(0, 1)
+                rank_ax.set_ylim(0, 1)
+                rank_ax.axis('off')
+
+                # Player info
                 info_text = f"{player_name}\n"
                 info_text += f"{player_data['year']} • {player_data['position']}\n"
-                info_text += f"VOR: {player_data['vor']:.1f}"
+                info_text += f"VOR: {player_data['vor']:.1f}\n"
+                info_text += f"Points: {player_data['points']:.1f}"
 
-                player_ax.text(0.35, 0.5, info_text, transform=player_ax.transAxes,
-                             fontsize=8, ha='left', va='center',
-                             bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.3))
+                player_ax.text(0.5, 0.08, info_text, transform=player_ax.transAxes,
+                             fontsize=10, ha='center', va='top', fontweight='bold',
+                             bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue',
+                                     alpha=0.4, edgecolor='steelblue', linewidth=2),
+                             linespacing=1.5)
             else:
-                # No headshot, just show text
-                info_text = f"#{idx+1} {player_name}\n"
+                # No headshot, text only with rank
+                info_text = f"#{idx+1}\n{player_name}\n\n"
                 info_text += f"{player_data['year']} • {player_data['position']}\n"
-                info_text += f"VOR: {player_data['vor']:.1f} • Pts: {player_data['points']:.1f}"
+                info_text += f"VOR: {player_data['vor']:.1f}\n"
+                info_text += f"Points: {player_data['points']:.1f}"
 
                 player_ax.text(0.5, 0.5, info_text, transform=player_ax.transAxes,
-                             fontsize=8, ha='center', va='center',
-                             bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.5))
+                             fontsize=10, ha='center', va='center', fontweight='bold',
+                             bbox=dict(boxstyle='round,pad=0.8', facecolor='lightyellow',
+                                     alpha=0.6, edgecolor=rank_color, linewidth=3),
+                             linespacing=1.6)
 
-    plt.tight_layout(rect=[0, 0.15, 1, 1])  # Leave space for Hall of Fame at bottom
-    plt.savefig('fantasy_wrapped_charts.png', dpi=300, bbox_inches='tight')
-    print("\nCharts saved to: fantasy_wrapped_charts.png")
+        plt.savefig('hall_of_fame.png', dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close()
+        print("  ✓ hall_of_fame.png")
+
+    print("\n✅ All individual charts saved successfully!")
 
 
 def save_structured_data(payload: Dict[str, Any]) -> None:
-    """Persist structured outputs for downstream analysis."""
+    """Persist structured outputs for downstream analysis (legacy draft picks only)."""
     try:
-        with open('fantasy_wrapped_data.json', 'w') as f:
-            json.dump(payload, f, indent=2)
-
+        # Keep CSV exports for backwards compatibility
         if payload.get('best_picks'):
             pd.DataFrame(payload['best_picks']).to_csv(
                 'fantasy_wrapped_best_picks.csv', index=False
@@ -2158,10 +2263,328 @@ def save_structured_data(payload: Dict[str, Any]) -> None:
                 'fantasy_wrapped_best_pick_by_year.csv', index=False
             )
 
-        print("\nStructured data saved to: fantasy_wrapped_data.json, "
-              "fantasy_wrapped_best_picks.csv, and fantasy_wrapped_best_pick_by_year.csv")
+        print("\nCSV data saved: fantasy_wrapped_best_picks.csv, fantasy_wrapped_best_pick_by_year.csv")
     except Exception as e:
-        print(f"\nWarning: Unable to save structured data: {e}")
+        print(f"\nWarning: Unable to save CSV data: {e}")
+
+
+def save_comprehensive_json(all_data: Dict, vor_data: Dict) -> None:
+    """Save comprehensive JSON with all awards, rankings, and statistics."""
+    try:
+        team_stats = all_data['team_stats']
+        generated_at = datetime.now()
+
+        # Prepare comprehensive payload
+        payload = {
+            'generated_at': generated_at.isoformat(),
+            'league_years': YEARS,
+            'core_awards': {},
+            'rankings': {},
+            'weekly_awards': {},
+            'streaks': {},
+            'special_awards': {},
+            'injury_analysis': {},
+            'head_to_head': {},
+            'player_analysis': {},
+            'draft_analysis': {},
+        }
+
+        # ========================================
+        # CORE AWARDS
+        # ========================================
+        scoring_leader = max(team_stats.items(), key=lambda x: x[1]['total_points_for'])
+        payload['core_awards']['scoring_leader'] = {
+            'team': scoring_leader[0],
+            'total_points': scoring_leader[1]['total_points_for']
+        }
+
+        unluckiest = max(team_stats.items(), key=lambda x: x[1]['total_points_against'])
+        payload['core_awards']['unluckiest_manager'] = {
+            'team': unluckiest[0],
+            'points_against': unluckiest[1]['total_points_against']
+        }
+
+        luckiest = min(team_stats.items(), key=lambda x: x[1]['total_points_against'])
+        payload['core_awards']['luckiest_manager'] = {
+            'team': luckiest[0],
+            'points_against': luckiest[1]['total_points_against']
+        }
+
+        best_record_team = max(team_stats.items(),
+                              key=lambda x: (x[1]['wins'] + 0.5 * x[1]['ties']) /
+                                           (x[1]['wins'] + x[1]['losses'] + x[1]['ties']))
+        total_games = (best_record_team[1]['wins'] + best_record_team[1]['losses'] +
+                      best_record_team[1]['ties'])
+        win_pct = (best_record_team[1]['wins'] + 0.5 * best_record_team[1]['ties']) / total_games * 100
+
+        payload['core_awards']['best_record'] = {
+            'team': best_record_team[0],
+            'wins': best_record_team[1]['wins'],
+            'losses': best_record_team[1]['losses'],
+            'ties': best_record_team[1]['ties'],
+            'win_percentage': win_pct
+        }
+
+        # ========================================
+        # RANKINGS
+        # ========================================
+        payload['rankings']['scoring'] = [
+            {
+                'rank': i,
+                'team': team,
+                'total_points': stats['total_points_for']
+            }
+            for i, (team, stats) in enumerate(sorted(team_stats.items(),
+                                                     key=lambda x: x[1]['total_points_for'],
+                                                     reverse=True), 1)
+        ]
+
+        payload['rankings']['win_percentage'] = [
+            {
+                'rank': i,
+                'team': team,
+                'wins': stats['wins'],
+                'losses': stats['losses'],
+                'ties': stats['ties'],
+                'win_percentage': (stats['wins'] + 0.5 * stats['ties']) /
+                                 (stats['wins'] + stats['losses'] + stats['ties']) * 100
+            }
+            for i, (team, stats) in enumerate(sorted(team_stats.items(),
+                                                     key=lambda x: (x[1]['wins'] + 0.5 * x[1]['ties']) /
+                                                                  (x[1]['wins'] + x[1]['losses'] + x[1]['ties']),
+                                                     reverse=True), 1)
+        ]
+
+        payload['rankings']['luck'] = [
+            {
+                'rank': i,
+                'team': team,
+                'points_against': stats['total_points_against']
+            }
+            for i, (team, stats) in enumerate(sorted(team_stats.items(),
+                                                     key=lambda x: x[1]['total_points_against']), 1)
+        ]
+
+        # ========================================
+        # WEEKLY AWARDS
+        # ========================================
+        explosion = find_offensive_explosion(all_data['matchups'])
+        if explosion:
+            payload['weekly_awards']['offensive_explosion'] = explosion
+
+        dud = find_offensive_dud(all_data['matchups'])
+        if dud:
+            payload['weekly_awards']['offensive_dud'] = dud
+
+        heartbreaker = calculate_heartbreaker_award(all_data['matchups'])
+        if heartbreaker:
+            payload['weekly_awards']['heartbreaker'] = heartbreaker
+
+        bad_beat = calculate_bad_beat(all_data['matchups'])
+        if bad_beat:
+            payload['weekly_awards']['bad_beat'] = bad_beat
+
+        # ========================================
+        # STREAKS
+        # ========================================
+        streaks = calculate_win_loss_streaks(all_data['matchups'])
+        payload['streaks'] = streaks
+
+        # ========================================
+        # SPECIAL AWARDS
+        # ========================================
+        try:
+            late_legend = calculate_late_round_legend(all_data, vor_data)
+            if late_legend:
+                payload['special_awards']['late_round_legend'] = late_legend
+        except KeyError:
+            # Draft data not available
+            pass
+
+        punt_god, punt_god_points, punt_breakdown = calculate_punt_god(all_data)
+        if punt_god:
+            payload['special_awards']['punt_god'] = {
+                'team': punt_god,
+                'total_points': punt_god_points,
+                'breakdown': punt_breakdown
+            }
+
+        # ========================================
+        # INJURY ANALYSIS
+        # ========================================
+        most_injured = max(team_stats.items(), key=lambda x: x[1]['injury_weeks'])
+        frequent_flyer = None
+        if most_injured[1]['injured_players']:
+            ff = most_injured[1]['injured_players'].most_common(1)[0]
+            frequent_flyer = {'player': ff[0], 'injury_weeks': ff[1]}
+
+        payload['injury_analysis']['most_injured_team'] = {
+            'team': most_injured[0],
+            'total_injury_weeks': most_injured[1]['injury_weeks'],
+            'max_injuries_single_week': most_injured[1]['max_injuries_single_week'],
+            'frequent_flyer': frequent_flyer
+        }
+
+        payload['injury_analysis']['rankings'] = [
+            {
+                'rank': i,
+                'team': team,
+                'injury_weeks': stats['injury_weeks'],
+                'max_injuries_single_week': stats['max_injuries_single_week']
+            }
+            for i, (team, stats) in enumerate(sorted(team_stats.items(),
+                                                     key=lambda x: x[1]['injury_weeks'],
+                                                     reverse=True), 1)
+        ]
+
+        try:
+            weighted_injury_data = calculate_weighted_injury_impact(all_data, vor_data)
+            payload['injury_analysis']['weighted_impact'] = [
+                {
+                    'rank': i,
+                    'team': team,
+                    'weighted_score': score
+                }
+                for i, (team, score) in enumerate(sorted(weighted_injury_data['manager_scores'].items(),
+                                                         key=lambda x: x[1],
+                                                         reverse=True), 1)
+            ]
+        except KeyError:
+            # Draft data not available for weighted injury impact
+            pass
+
+        # ========================================
+        # HEAD-TO-HEAD STATS
+        # ========================================
+        h2h_stats = calculate_head_to_head_stats(all_data['matchups'])
+        nemesis_data = calculate_nemesis_and_victims(h2h_stats)
+        payload['head_to_head']['nemesis_and_victims'] = nemesis_data
+        payload['head_to_head']['h2h_stats'] = h2h_stats
+
+        # ========================================
+        # PLAYER ANALYSIS
+        # ========================================
+        # Single-Season MVP
+        mvp, mvp_year, mvp_info = find_most_valuable_player(vor_data)
+        payload['player_analysis']['mvp_single_season'] = {
+            'player': mvp,
+            'year': mvp_year,
+            'position': mvp_info['position'],
+            'points': mvp_info['points'],
+            'vor': mvp_info['vor'],
+            'team': mvp_info['owner']
+        }
+
+        # 5-Year Total VOR MVP (Most Important)
+        total_vor_rankings, avg_vor_rankings = calculate_five_year_vor(vor_data)
+        if total_vor_rankings:
+            mvp_5year = total_vor_rankings[0]
+            payload['player_analysis']['mvp_5year_total_vor'] = {
+                'player': mvp_5year['player'],
+                'total_vor': mvp_5year['total_vor'],
+                'avg_vor': mvp_5year['avg_vor'],
+                'seasons_played': mvp_5year['seasons_played'],
+                'years': mvp_5year['years'],
+                'position': mvp_5year['position']
+            }
+
+        # Full rankings
+        payload['player_analysis']['top_5_year_total_vor'] = total_vor_rankings[:10]
+        payload['player_analysis']['top_5_year_avg_vor'] = [
+            p for p in avg_vor_rankings if p['seasons_played'] >= 2
+        ][:10]
+
+        # Top 10 Most Valuable Seasons
+        all_player_seasons = []
+        for year, year_vor in vor_data.items():
+            for player_key, data in year_vor.items():
+                display_name = data.get('name', player_key)
+                all_player_seasons.append({
+                    'player': display_name,
+                    'year': year,
+                    'vor': data['vor'],
+                    'points': data['points'],
+                    'position': data['position'],
+                    'owner': data['owner']
+                })
+        all_player_seasons.sort(key=lambda x: x['vor'], reverse=True)
+        payload['player_analysis']['top_10_seasons'] = all_player_seasons[:10]
+
+        # ========================================
+        # DRAFT ANALYSIS
+        # ========================================
+        try:
+            best_picks, round_average_by_year = find_best_draft_picks(all_data, vor_data)
+            payload['draft_analysis']['best_picks_all_time'] = [
+                p for p in best_picks if not p['is_keeper']
+            ][:20]
+
+            best_pick_by_year = []
+            for year in YEARS:
+                year_picks = [p for p in best_picks if p['year'] == year and not p['is_keeper']]
+                if year_picks:
+                    best = max(year_picks, key=lambda p: p['value_score'])
+                    best_pick_by_year.append({
+                        'year': year,
+                        'player': best['player'],
+                        'round': best['round'],
+                        'vor': best['vor'],
+                        'round_average_vor': best['round_average'],
+                        'delta_vs_round': best['value_score'],
+                        'seasons_contributing': best['seasons_contributing'],
+                        'team': best['team']
+                    })
+            payload['draft_analysis']['best_pick_by_year'] = best_pick_by_year
+
+            payload['draft_analysis']['round_average_vor_by_year'] = {
+                year: {str(rnd): avg for rnd, avg in round_map.items()}
+                for year, round_map in round_average_by_year.items()
+            }
+
+            keeper_values = calculate_keeper_value(all_data, vor_data)
+            payload['draft_analysis']['keeper_value_rankings'] = [
+                {'rank': i, 'team': team, 'total_keeper_vor': value}
+                for i, (team, value) in enumerate(sorted(keeper_values.items(),
+                                                         key=lambda x: x[1],
+                                                         reverse=True), 1)
+            ]
+
+            draft_values = calculate_draft_pick_value(all_data, vor_data)
+            payload['draft_analysis']['draft_pick_value_rankings'] = [
+                {'rank': i, 'team': team, 'total_draft_pick_vor': value}
+                for i, (team, value) in enumerate(sorted(draft_values.items(),
+                                                         key=lambda x: x[1],
+                                                         reverse=True), 1)
+            ]
+        except KeyError as e:
+            # Draft data not available (e.g., in test mode)
+            payload['draft_analysis']['note'] = 'Draft data not available'
+
+        # ========================================
+        # TEAM STATS (Raw Data)
+        # ========================================
+        payload['team_stats'] = {
+            team: {
+                'total_points_for': stats['total_points_for'],
+                'total_points_against': stats['total_points_against'],
+                'wins': stats['wins'],
+                'losses': stats['losses'],
+                'ties': stats['ties'],
+                'championships': stats['championships'],
+                'injury_weeks': stats['injury_weeks'],
+                'max_injuries_single_week': stats['max_injuries_single_week']
+            }
+            for team, stats in team_stats.items()
+        }
+
+        # Save to JSON
+        with open('fantasy_wrapped_data.json', 'w') as f:
+            json.dump(payload, f, indent=2)
+
+        print("\n✅ Comprehensive JSON saved to: fantasy_wrapped_data.json")
+
+    except Exception as e:
+        print(f"\n⚠️  Warning: Unable to save comprehensive JSON: {e}")
 
 
 # ========================================
@@ -2586,14 +3009,13 @@ def generate_report(all_data: Dict):
 
     print("\nReport saved to: fantasy_wrapped_report.txt")
 
+    # Save comprehensive JSON with all data
+    save_comprehensive_json(all_data, vor_data)
+
+    # Save legacy CSV files for backwards compatibility
     save_structured_data({
-        'generated_at': generated_at.isoformat(),
         'best_picks': best_picks,
         'best_pick_by_year': best_pick_by_year,
-        'round_average_vor_by_year': {
-            year: {str(rnd): avg for rnd, avg in round_map.items()}
-            for year, round_map in round_average_by_year.items()
-        }
     })
 
     # Also print to console
@@ -2619,20 +3041,39 @@ def main():
     print("Phase 1: Extracting league data...")
     all_data = extract_all_data()
 
-    # Calculate VOR and find MVP
+    # Calculate VOR and find MVPs
     print("\nPhase 2: Calculating player values and downloading player headshots...")
     vor_data = calculate_value_over_replacement(all_data)
+
+    # Single-season MVP
     mvp_name, mvp_year, mvp_info = find_most_valuable_player(vor_data)
 
-    # Download MVP headshot
+    # Download single-season MVP headshot
     mvp_headshot = None
     if mvp_name and mvp_info and mvp_info.get('player_id'):
-        print(f"  Found MVP: {mvp_name} ({mvp_year})")
+        print(f"  Found Single-Season MVP: {mvp_name} ({mvp_year})")
         mvp_headshot = download_player_headshot(
             mvp_info['player_id'],
             mvp_name,
             save_path='mvp_headshot.png'
         )
+
+    # 5-Year Total VOR MVP
+    total_vor_rankings, avg_vor_rankings = calculate_five_year_vor(vor_data)
+    mvp_5year_info = None
+    mvp_5year_headshot = None
+    if total_vor_rankings:
+        mvp_5year_info = total_vor_rankings[0]
+        print(f"  Found 5-Year Total VOR MVP: {mvp_5year_info['player']} "
+              f"({mvp_5year_info['total_vor']:.1f} VOR over {mvp_5year_info['seasons_played']} seasons)")
+
+        # Download 5-year MVP headshot
+        if mvp_5year_info.get('player_id'):
+            mvp_5year_headshot = download_player_headshot(
+                mvp_5year_info['player_id'],
+                mvp_5year_info['player'],
+                save_path='mvp_5year_headshot.png'
+            )
 
     # Get top 10 player seasons and download their headshots
     print("  Finding top player seasons...")
@@ -2643,16 +3084,26 @@ def main():
 
     print("\nPhase 3: Generating visualizations...")
     create_visualizations(all_data, mvp_name, mvp_year, mvp_info, mvp_headshot,
-                         top_players, player_headshots)
+                         top_players, player_headshots, mvp_5year_info, mvp_5year_headshot)
 
     print("\nPhase 4: Generating comprehensive report...")
     generate_report(all_data)
 
+    print("\nPhase 5: Generating HTML wrapped page...")
+    try:
+        from generate_html import generate_html_wrapped
+        generate_html_wrapped()
+    except Exception as e:
+        print(f"Warning: Could not generate HTML page: {e}")
+
     print("\n" + "=" * 80)
     print(" Analysis Complete!".center(80))
-    print(" Check fantasy_wrapped_report.txt and fantasy_wrapped_charts.png".center(80))
+    print(" Check fantasy_wrapped_report.txt and individual PNG visualizations".center(80))
+    print(" HTML Page: fantasy_wrapped.html".center(80))
     if mvp_headshot:
-        print(" MVP headshot saved to mvp_headshot.png".center(80))
+        print(" Single-Season MVP: mvp_panel.png".center(80))
+    if mvp_5year_headshot:
+        print(" 5-Year Total VOR MVP: mvp_5year.png".center(80))
     print("=" * 80)
 
 
