@@ -157,8 +157,23 @@ def extract_all_data():
             'draft_picks': defaultdict(list),     # year -> list of draft picks
         }),
         'matchups': [],
-        'player_seasons': defaultdict(lambda: defaultdict(float)),  # player -> year -> points
+        'player_seasons': defaultdict(lambda: defaultdict(float)),  # player_key -> year -> data
+        'player_id_to_name': {},  # player_id -> canonical name (most recent)
         'draft_data': defaultdict(dict),  # year -> draft info
+        # New: detailed injury tracking for weighted calculations
+        'injury_details': defaultdict(lambda: defaultdict(list)),  # year -> owner -> list of {player_key, week, player_name}
+        'weekly_rosters': defaultdict(lambda: defaultdict(dict)),  # year -> week -> owner -> set of player_keys
+        'weekly_player_points': defaultdict(lambda: defaultdict(dict)),  # year -> week -> player_key -> points
+        'season_weeks': {},  # year -> total regular season weeks
+        # NEW: Track player details from box scores for dropped player recovery
+        # Structure: year -> player_key -> {weekly_points: [], position, player_name, player_id, owners: set}
+        'box_score_player_data': defaultdict(lambda: defaultdict(lambda: {
+            'weekly_points': [],
+            'position': None,
+            'player_name': None,
+            'player_id': None,
+            'owners': set()
+        })),
     }
 
     for year in YEARS:
@@ -199,7 +214,10 @@ def extract_all_data():
 
         # Process weekly matchups
         try:
-            for week in range(1, league.settings.reg_season_count + 1):
+            total_weeks = league.settings.reg_season_count
+            all_data['season_weeks'][year] = total_weeks
+            
+            for week in range(1, total_weeks + 1):
                 try:
                     box_scores = league.box_scores(week)
                     for matchup in box_scores:
@@ -221,7 +239,7 @@ def extract_all_data():
                             all_data['team_stats'][home_owner]['weekly_scores'].append(matchup.home_score)
                             all_data['team_stats'][away_owner]['weekly_scores'].append(matchup.away_score)
 
-                            # Injury tracking
+                            # Injury tracking (original simple tracking)
                             home_injuries = count_injuries(matchup.home_lineup)
                             away_injuries = count_injuries(matchup.away_lineup)
 
@@ -236,6 +254,51 @@ def extract_all_data():
 
                             all_data['team_stats'][home_owner]['injured_players'].update(home_injuries['players'])
                             all_data['team_stats'][away_owner]['injured_players'].update(away_injuries['players'])
+                            
+                            # NEW: Detailed injury tracking for weighted calculations
+                            for injury in home_injuries['details']:
+                                all_data['injury_details'][year][home_owner].append({
+                                    'player_key': injury['player_key'],
+                                    'player_name': injury['player_name'],
+                                    'week': week
+                                })
+                            for injury in away_injuries['details']:
+                                all_data['injury_details'][year][away_owner].append({
+                                    'player_key': injury['player_key'],
+                                    'player_name': injury['player_name'],
+                                    'week': week
+                                })
+                            
+                            # NEW: Track rosters and player points for season-ending injury detection
+                            home_lineup_info = extract_lineup_info(matchup.home_lineup)
+                            away_lineup_info = extract_lineup_info(matchup.away_lineup)
+                            
+                            all_data['weekly_rosters'][year][week][home_owner] = home_lineup_info['roster']
+                            all_data['weekly_rosters'][year][week][away_owner] = away_lineup_info['roster']
+                            
+                            # Merge player points into the weekly tracker
+                            for player_key, points in home_lineup_info['player_points'].items():
+                                all_data['weekly_player_points'][year][week][player_key] = points
+                            for player_key, points in away_lineup_info['player_points'].items():
+                                all_data['weekly_player_points'][year][week][player_key] = points
+                            
+                            # NEW: Collect detailed player data from box scores for dropped player recovery
+                            # This ensures we capture season data for players who were dropped mid-season
+                            for player_key, details in home_lineup_info['player_details'].items():
+                                bs_data = all_data['box_score_player_data'][year][player_key]
+                                bs_data['weekly_points'].append(details['points'])
+                                bs_data['position'] = details['position']
+                                bs_data['player_name'] = details['player_name']
+                                bs_data['player_id'] = details['player_id']
+                                bs_data['owners'].add(home_owner)
+                            
+                            for player_key, details in away_lineup_info['player_details'].items():
+                                bs_data = all_data['box_score_player_data'][year][player_key]
+                                bs_data['weekly_points'].append(details['points'])
+                                bs_data['position'] = details['position']
+                                bs_data['player_name'] = details['player_name']
+                                bs_data['player_id'] = details['player_id']
+                                bs_data['owners'].add(away_owner)
 
                 except Exception as e:
                     print(f"  Warning: Could not load week {week} for {year}: {e}")
@@ -253,9 +316,10 @@ def extract_all_data():
 
 
 def count_injuries(lineup: List) -> Dict:
-    """Count injured players in a lineup."""
+    """Count injured players in a lineup and return detailed info."""
     injury_count = 0
     injured_players = []
+    injured_details = []  # New: detailed info for weighted tracking
 
     for player in lineup:
         status = getattr(player, 'injuryStatus', None)
@@ -263,6 +327,9 @@ def count_injuries(lineup: List) -> Dict:
 
         if normalized_status and normalized_status in INJURY_STATUSES:
             injury_count += 1
+            player_id = getattr(player, 'playerId', None)
+            player_key = str(player_id) if player_id else None
+            
             if hasattr(player, 'name'):
                 player_name = player.name
                 # Handle case where name might be a dict or other non-string type
@@ -272,16 +339,74 @@ def count_injuries(lineup: List) -> Dict:
                 elif not isinstance(player_name, str):
                     player_name = str(player_name)
                 injured_players.append(player_name)
+                
+                # Add detailed info
+                if player_key:
+                    injured_details.append({
+                        'player_key': player_key,
+                        'player_name': player_name,
+                        'player_id': player_id
+                    })
 
     return {
         'count': injury_count,
-        'players': injured_players
+        'players': injured_players,
+        'details': injured_details  # New field
+    }
+
+
+def extract_lineup_info(lineup: List) -> Dict:
+    """Extract roster and points info from a lineup for a given week."""
+    roster = set()
+    player_points = {}
+    player_details = {}  # NEW: Capture full player details for season aggregation
+    
+    for player in lineup:
+        player_id = getattr(player, 'playerId', None)
+        if player_id:
+            player_key = str(player_id)
+            roster.add(player_key)
+            # Get points scored this week
+            points = getattr(player, 'points', 0) or 0
+            player_points[player_key] = points
+            
+            # NEW: Capture player details for later aggregation
+            player_name = getattr(player, 'name', '')
+            if isinstance(player_name, dict):
+                player_name = player_name.get('fullName') or player_name.get('name') or str(player_name)
+            elif not isinstance(player_name, str):
+                player_name = str(player_name)
+            
+            position = getattr(player, 'position', 'UNKNOWN')
+            
+            player_details[player_key] = {
+                'player_id': player_id,
+                'player_name': player_name,
+                'position': position,
+                'points': points
+            }
+    
+    return {
+        'roster': roster,
+        'player_points': player_points,
+        'player_details': player_details  # NEW
     }
 
 
 def process_player_data(league: League, year: int, all_data: Dict):
-    """Process player scoring data for value calculations."""
-    # Collect all player season stats
+    """Process player scoring data for value calculations.
+    
+    This function collects player data from two sources:
+    1. team.roster - The current roster (may miss players dropped mid-season)
+    2. box_score_player_data - Aggregated from weekly box scores (captures all players)
+    
+    We prefer roster data when available (has accurate total_points from ESPN),
+    but supplement with box score aggregated data for players who were dropped
+    mid-season and no longer appear on any roster.
+    """
+    roster_player_keys = set()  # Track which players we found on rosters
+    
+    # First pass: Collect all player season stats from current rosters
     for team in league.teams:
         owner = get_owner_name(team)
 
@@ -299,15 +424,53 @@ def process_player_data(league: League, year: int, all_data: Dict):
 
                     position = getattr(player, 'position', 'UNKNOWN')
                     points = player.total_points
-
-                    # Store player season stats (including player ID for headshots)
                     player_id = getattr(player, 'playerId', None)
-                    all_data['player_seasons'][player_name][year] = {
+
+                    # Use player_id as the primary key if available, fall back to name
+                    player_key = str(player_id) if player_id else player_name
+                    roster_player_keys.add(player_key)
+                    
+                    # Store player season stats keyed by player_id
+                    all_data['player_seasons'][player_key][year] = {
                         'points': points,
                         'position': position,
                         'team_owner': owner,
-                        'player_id': player_id
+                        'player_id': player_id,
+                        'player_name': player_name  # Store name with each season
                     }
+                    
+                    # Update the player_id -> name mapping (use most recent name)
+                    all_data['player_id_to_name'][player_key] = player_name
+
+    # Second pass: Add players from box scores who are NOT on any current roster
+    # This captures players who were dropped mid-season (e.g., due to injury)
+    if year in all_data['box_score_player_data']:
+        for player_key, bs_data in all_data['box_score_player_data'][year].items():
+            # Only add if NOT already captured from roster data
+            if player_key not in roster_player_keys:
+                # Aggregate weekly points for season total
+                total_points = sum(bs_data['weekly_points'])
+                position = bs_data['position'] or 'UNKNOWN'
+                player_name = bs_data['player_name'] or player_key
+                player_id = bs_data['player_id']
+                
+                # Use the most recent owner (last team to roster them)
+                # If multiple owners, just pick one (they were traded/dropped)
+                owners = bs_data['owners']
+                owner = list(owners)[-1] if owners else 'Unknown'
+                
+                all_data['player_seasons'][player_key][year] = {
+                    'points': total_points,
+                    'position': position,
+                    'team_owner': owner,
+                    'player_id': player_id,
+                    'player_name': player_name,
+                    '_from_box_scores': True  # Flag for debugging
+                }
+                
+                # Update the player_id -> name mapping
+                if player_name and player_name != player_key:
+                    all_data['player_id_to_name'][player_key] = player_name
 
     # Process draft data
     try:
@@ -319,6 +482,7 @@ def process_player_data(league: League, year: int, all_data: Dict):
 
             for pick in draft_picks:
                 player_name = getattr(pick, 'playerName', None)
+                player_id = getattr(pick, 'playerId', None)
 
                 # Handle case where playerName might be a dict or other non-string type
                 if isinstance(player_name, dict):
@@ -326,11 +490,20 @@ def process_player_data(league: League, year: int, all_data: Dict):
                 elif player_name and not isinstance(player_name, str):
                     player_name = str(player_name)
 
+                # Use player_id as key if available
+                player_key = str(player_id) if player_id else player_name
+                
+                # Update name mapping
+                if player_key and player_name:
+                    all_data['player_id_to_name'][player_key] = player_name
+
                 pick_info = {
                     'round': getattr(pick, 'round_num', None),
                     'pick': getattr(pick, 'round_pick', None),
                     'overall': getattr(pick, 'overall_pick', None),
                     'player_name': player_name,
+                    'player_key': player_key,  # Add player_key for lookups
+                    'player_id': player_id,
                     'team': getattr(pick, 'team', None),
                     'is_keeper': getattr(pick, 'keeper_status', False),
                 }
@@ -522,6 +695,7 @@ def calculate_nemesis_and_victims(h2h_stats: Dict) -> Dict:
 def calculate_value_over_replacement(all_data: Dict) -> Dict:
     """Calculate value over replacement for all players."""
     vor_data = {}
+    player_id_to_name = all_data.get('player_id_to_name', {})
 
     for year in YEARS:
         if year not in all_data['leagues']:
@@ -530,11 +704,14 @@ def calculate_value_over_replacement(all_data: Dict) -> Dict:
         # Collect all player stats by position
         position_stats = defaultdict(list)
 
-        for player_name, seasons in all_data['player_seasons'].items():
+        for player_key, seasons in all_data['player_seasons'].items():
             if year in seasons:
                 player_info = seasons[year]
                 position = player_info['position']
                 points = player_info['points']
+                
+                # Get display name from mapping or from season data
+                display_name = player_id_to_name.get(player_key, player_info.get('player_name', player_key))
 
                 # Map position to base position (handle flex designations)
                 base_pos = position
@@ -543,7 +720,8 @@ def calculate_value_over_replacement(all_data: Dict) -> Dict:
 
                 if base_pos in STARTABLE_THRESHOLDS:
                     position_stats[base_pos].append({
-                        'name': player_name,
+                        'player_key': player_key,
+                        'name': display_name,
                         'points': points,
                         'owner': player_info['team_owner'],
                         'player_id': player_info.get('player_id', None)
@@ -576,12 +754,14 @@ def calculate_value_over_replacement(all_data: Dict) -> Dict:
                     # meaningful negative VOR in later seasons for players who
                     # drop in production.
                     vor = player['points'] - replacement
-                    year_vor[player['name']] = {
+                    # Use player_key as the dictionary key for consistent lookups
+                    year_vor[player['player_key']] = {
                         'vor': vor,
                         'points': player['points'],
                         'position': pos,
                         'owner': player['owner'],
-                        'player_id': player.get('player_id', None)
+                        'player_id': player.get('player_id', None),
+                        'name': player['name']  # Include display name
                     }
 
         vor_data[year] = year_vor
@@ -589,9 +769,21 @@ def calculate_value_over_replacement(all_data: Dict) -> Dict:
     return vor_data
 
 
-def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> List[Dict]:
-    """Find the best draft picks considering cost and value."""
-    best_picks = []
+def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> Tuple[List[Dict], Dict[int, Dict[int, float]]]:
+    """
+    Find the best draft picks by comparing VOR to round average.
+    
+    Returns:
+        Tuple of (best_picks list, round_averages_by_year dict)
+        
+    The value_score is calculated as delta vs round average - how much better
+    a pick performed compared to other players drafted in the same round that year.
+    This properly rewards late-round steals over early-round picks that merely
+    met expectations.
+    """
+    # First pass: collect all picks with their VOR data
+    all_picks = []
+    player_id_to_name = all_data.get('player_id_to_name', {})
 
     for year in YEARS:
         if year not in all_data['draft_data'] or year not in vor_data:
@@ -602,35 +794,33 @@ def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> List[Dict]:
 
         for pick in draft['picks']:
             player_name = pick['player_name']
+            # Use player_key for lookups (matches how VOR data is keyed)
+            player_key = pick.get('player_key', player_name)
+            
+            # Get display name from mapping
+            display_name = player_id_to_name.get(player_key, player_name)
 
             # Look at production in the draft year and all future years.
             future_years = [
                 y for y in YEARS
-                if y >= year and y in vor_data and player_name in vor_data[y]
+                if y >= year and y in vor_data and player_key in vor_data[y]
             ]
 
             if not future_years:
                 continue
 
-            total_future_vor = sum(vor_data[y][player_name]['vor'] for y in future_years)
+            total_future_vor = sum(vor_data[y][player_key]['vor'] for y in future_years)
             avg_future_vor = total_future_vor / len(future_years)
-            draft_year_vor = year_vor[player_name]['vor'] if player_name in year_vor else 0
-            draft_year_points = year_vor[player_name]['points'] if player_name in year_vor else 0
+            draft_year_vor = year_vor[player_key]['vor'] if player_key in year_vor else 0
+            draft_year_points = year_vor[player_key]['points'] if player_key in year_vor else 0
 
-            # Calculate draft value score
-            # Earlier picks have higher cost, so we want high VOR relative to draft position
-            # For keepers (rounds 1-6), they have no cost advantage in this league
             round_num = pick['round'] if pick['round'] else 1
             is_keeper = pick['is_keeper']
 
-            if round_num > 0:
-                value_score = total_future_vor / (round_num if not is_keeper else 1)
-            else:
-                value_score = total_future_vor
-
-            best_picks.append({
+            all_picks.append({
                 'year': year,
-                'player': player_name,
+                'player': display_name,  # Use display name for output
+                'player_key': player_key,  # Keep key for internal lookups
                 'round': round_num,
                 'overall': pick['overall'],
                 'vor': total_future_vor,
@@ -639,14 +829,46 @@ def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> List[Dict]:
                 'seasons_contributing': len(future_years),
                 'points': draft_year_points,
                 'is_keeper': is_keeper,
-                'value_score': value_score,
                 'team': get_owner_name(pick['team']) if pick['team'] else 'Unknown'
             })
 
-    # Sort by value score
-    best_picks.sort(key=lambda x: x['value_score'], reverse=True)
+    # Second pass: calculate round averages per year (excluding keepers for fair comparison)
+    round_averages_by_year: Dict[int, Dict[int, float]] = {}
+    
+    for year in YEARS:
+        year_picks = [p for p in all_picks if p['year'] == year and not p['is_keeper']]
+        if not year_picks:
+            continue
+            
+        round_vor_totals = defaultdict(list)
+        for pick in year_picks:
+            round_vor_totals[pick['round']].append(pick['vor'])
+        
+        round_averages_by_year[year] = {
+            rnd: sum(vors) / len(vors)
+            for rnd, vors in round_vor_totals.items()
+            if vors
+        }
 
-    return best_picks
+    # Third pass: calculate value_score as delta vs round average
+    for pick in all_picks:
+        year = pick['year']
+        round_num = pick['round']
+        
+        # For keepers, we don't have a meaningful "round average" comparison
+        # since they're not competing for draft slots. Use raw VOR instead.
+        if pick['is_keeper']:
+            pick['round_average'] = 0
+            pick['value_score'] = pick['vor']
+        else:
+            round_avg = round_averages_by_year.get(year, {}).get(round_num, 0)
+            pick['round_average'] = round_avg
+            pick['value_score'] = pick['vor'] - round_avg
+
+    # Sort by value score (delta vs round average)
+    all_picks.sort(key=lambda x: x['value_score'], reverse=True)
+
+    return all_picks, round_averages_by_year
 
 
 def calculate_keeper_value(all_data: Dict, vor_data: Dict) -> Dict[str, float]:
@@ -662,9 +884,10 @@ def calculate_keeper_value(all_data: Dict, vor_data: Dict) -> Dict[str, float]:
 
         for pick in draft['picks']:
             if pick['is_keeper']:
-                player_name = pick['player_name']
-                if player_name in year_vor:
-                    vor = year_vor[player_name]['vor']
+                # Use player_key for lookup (matches VOR data keys)
+                player_key = pick.get('player_key', pick['player_name'])
+                if player_key in year_vor:
+                    vor = year_vor[player_key]['vor']
                     if pick['team']:
                         owner = get_owner_name(pick['team'])
                         keeper_values[owner] += vor
@@ -689,14 +912,253 @@ def calculate_draft_pick_value(all_data: Dict, vor_data: Dict) -> Dict[str, floa
 
         for pick in draft['picks']:
             if not pick['is_keeper']:
-                player_name = pick['player_name']
-                if player_name in year_vor:
-                    vor = year_vor[player_name]['vor']
+                # Use player_key for lookup (matches VOR data keys)
+                player_key = pick.get('player_key', pick['player_name'])
+                if player_key in year_vor:
+                    vor = year_vor[player_key]['vor']
                     if pick['team']:
                         owner = get_owner_name(pick['team'])
                         draft_values[owner] += vor
 
     return draft_values
+
+
+def build_draft_capital_lookup(all_data: Dict, vor_data: Dict) -> Dict[int, Dict[str, int]]:
+    """
+    Build a lookup of player_key -> draft capital value for each year.
+    
+    Draft capital uses inverse round number: Round 1 = 15 pts, Round 2 = 14 pts, etc.
+    
+    For keepers (2022+), we sort them by prior year VOR and assign synthetic rounds 1-6.
+    For drafted players, we use their actual draft round.
+    Undrafted/waiver players get value = 0.
+    
+    Returns:
+        Dict of year -> player_key -> draft_capital_value
+    """
+    draft_capital = {}
+    
+    for year in YEARS:
+        if year not in all_data['draft_data']:
+            continue
+            
+        draft_capital[year] = {}
+        draft = all_data['draft_data'][year]
+        
+        # Separate keepers and regular draft picks
+        keepers = []
+        regular_picks = []
+        
+        for pick in draft['picks']:
+            player_key = pick.get('player_key')
+            if not player_key:
+                continue
+                
+            if pick['is_keeper']:
+                keepers.append(pick)
+            else:
+                regular_picks.append(pick)
+        
+        # Handle keepers: sort by prior year VOR and assign synthetic rounds 1-6
+        if keepers and year > 2021 and (year - 1) in vor_data:
+            prior_year_vor = vor_data[year - 1]
+            
+            # Get prior year VOR for each keeper
+            keeper_vor_list = []
+            for pick in keepers:
+                player_key = pick.get('player_key')
+                prior_vor = prior_year_vor.get(player_key, {}).get('vor', 0)
+                keeper_vor_list.append({
+                    'player_key': player_key,
+                    'prior_vor': prior_vor,
+                    'player_name': pick.get('player_name')
+                })
+            
+            # Sort by prior VOR descending (best keeper = round 1)
+            keeper_vor_list.sort(key=lambda x: x['prior_vor'], reverse=True)
+            
+            # Assign synthetic rounds 1-6
+            for i, keeper in enumerate(keeper_vor_list):
+                synthetic_round = i + 1  # 1, 2, 3, 4, 5, 6
+                # Inverse round: Round 1 = 15, Round 6 = 10
+                capital_value = max(1, 16 - synthetic_round)
+                draft_capital[year][keeper['player_key']] = capital_value
+        
+        # Handle regular draft picks (rounds 7+)
+        for pick in regular_picks:
+            player_key = pick.get('player_key')
+            if not player_key:
+                continue
+            round_num = pick.get('round', 15)
+            # Inverse round: Round 7 = 9, Round 15 = 1
+            capital_value = max(1, 16 - round_num)
+            draft_capital[year][player_key] = capital_value
+    
+    return draft_capital
+
+
+def calculate_weighted_injury_impact(all_data: Dict, vor_data: Dict) -> Dict:
+    """
+    Calculate weighted injury impact for each manager.
+    
+    This weights injuries by draft capital (inverse round number) to capture
+    that losing a 1st round pick hurts more than losing a waiver pickup.
+    
+    Also detects season-ending injuries where a player was dropped while injured
+    and never played again that season.
+    
+    Returns:
+        Dict with:
+        - 'manager_scores': {manager -> total weighted injury score}
+        - 'most_costly': {manager -> {player_name, total_impact, weeks, draft_capital, year}}
+        - 'season_ending': {manager -> list of season-ending injuries detected}
+    """
+    draft_capital = build_draft_capital_lookup(all_data, vor_data)
+    player_id_to_name = all_data.get('player_id_to_name', {})
+    
+    manager_scores = defaultdict(float)
+    # Track per-year, per-player injuries to handle draft capital correctly
+    # Structure: manager -> (year, player_key) -> injury info
+    player_injury_totals = defaultdict(lambda: defaultdict(lambda: {
+        'weeks': 0,
+        'draft_capital': 0,
+        'player_name': '',
+        'player_key': '',
+        'year': 0
+    }))
+    season_ending_injuries = defaultdict(list)
+    
+    for year in YEARS:
+        if year not in all_data['injury_details']:
+            continue
+            
+        year_capital = draft_capital.get(year, {})
+        total_weeks = all_data['season_weeks'].get(year, 14)
+        
+        # Determine the last week we actually have data for this year
+        # This handles incomplete/in-progress seasons
+        weeks_with_data = set()
+        for week in all_data['weekly_rosters'].get(year, {}).keys():
+            weeks_with_data.add(week)
+        last_week_with_data = max(weeks_with_data) if weeks_with_data else 0
+        
+        # Check if season is complete (we have data for all regular season weeks)
+        season_complete = last_week_with_data >= total_weeks
+        
+        # First pass: count regular injury weeks (while on roster)
+        for owner, injuries in all_data['injury_details'][year].items():
+            for injury in injuries:
+                player_key = injury['player_key']
+                player_name = injury['player_name']
+                
+                # Get draft capital for THIS year (0 for undrafted/waiver)
+                capital = year_capital.get(player_key, 0)
+                
+                if capital > 0:  # Only count drafted players
+                    manager_scores[owner] += capital
+                    
+                    # Track per-year, per-player totals for "most costly" calculation
+                    key = (year, player_key)
+                    player_injury_totals[owner][key]['weeks'] += 1
+                    player_injury_totals[owner][key]['draft_capital'] = capital
+                    player_injury_totals[owner][key]['player_name'] = player_name
+                    player_injury_totals[owner][key]['player_key'] = player_key
+                    player_injury_totals[owner][key]['year'] = year
+        
+        # Second pass: detect season-ending injuries (dropped while injured, never played again)
+        # Only do this for COMPLETE seasons to avoid false positives
+        if not season_complete:
+            continue
+            
+        for owner, injuries in all_data['injury_details'][year].items():
+            # Group injuries by player to find their last injured week with this owner
+            player_last_injured_week = defaultdict(int)
+            player_names = {}
+            
+            for injury in injuries:
+                player_key = injury['player_key']
+                week = injury['week']
+                if week > player_last_injured_week[player_key]:
+                    player_last_injured_week[player_key] = week
+                    player_names[player_key] = injury['player_name']
+            
+            # For each player, check if they were on roster after their last injured week
+            for player_key, last_injured_week in player_last_injured_week.items():
+                capital = year_capital.get(player_key, 0)
+                if capital == 0:
+                    continue  # Skip undrafted players
+                
+                # Skip if already at end of season (no remaining weeks to credit)
+                if last_injured_week >= total_weeks:
+                    continue
+                
+                # Check if player was on this owner's roster in any subsequent week
+                was_kept = False
+                for check_week in range(last_injured_week + 1, total_weeks + 1):
+                    week_rosters = all_data['weekly_rosters'].get(year, {}).get(check_week, {})
+                    if player_key in week_rosters.get(owner, set()):
+                        was_kept = True
+                        break
+                
+                if was_kept:
+                    continue  # Player stayed on roster, not a season-ender
+                
+                # Player was dropped - check if they ever played again (scored points for anyone)
+                played_again = False
+                for check_week in range(last_injured_week + 1, total_weeks + 1):
+                    week_points = all_data['weekly_player_points'].get(year, {}).get(check_week, {})
+                    if week_points.get(player_key, 0) > 0:
+                        played_again = True
+                        break
+                
+                if not played_again:
+                    # Season-ending injury detected!
+                    # Credit only the weeks AFTER they were dropped (not already counted)
+                    remaining_weeks = total_weeks - last_injured_week
+                    additional_impact = remaining_weeks * capital
+                    
+                    manager_scores[owner] += additional_impact
+                    
+                    # Add to the per-year tracking
+                    key = (year, player_key)
+                    player_injury_totals[owner][key]['weeks'] += remaining_weeks
+                    
+                    season_ending_injuries[owner].append({
+                        'player_key': player_key,
+                        'player_name': player_names.get(player_key, player_id_to_name.get(player_key, player_key)),
+                        'last_rostered_week': last_injured_week,
+                        'remaining_weeks': remaining_weeks,
+                        'additional_impact': additional_impact,
+                        'year': year
+                    })
+    
+    # Calculate most costly injury per manager (across all years)
+    most_costly = {}
+    for owner, year_players in player_injury_totals.items():
+        max_impact = 0
+        worst_injury = None
+        
+        for (year, player_key), info in year_players.items():
+            total_impact = info['weeks'] * info['draft_capital']
+            if total_impact > max_impact:
+                max_impact = total_impact
+                worst_injury = {
+                    'player_name': info['player_name'],
+                    'player_key': player_key,
+                    'weeks': info['weeks'],
+                    'draft_capital': info['draft_capital'],
+                    'total_impact': total_impact,
+                    'year': year
+                }
+        
+        if worst_injury:
+            most_costly[owner] = worst_injury
+    
+    return {
+        'manager_scores': dict(manager_scores),
+        'most_costly': most_costly,
+        'season_ending': dict(season_ending_injuries)
+    }
 
 
 def find_most_valuable_player(vor_data: Dict) -> Tuple[str, int, Dict]:
@@ -707,10 +1169,11 @@ def find_most_valuable_player(vor_data: Dict) -> Tuple[str, int, Dict]:
     mvp_info = None
 
     for year, year_vor in vor_data.items():
-        for player, data in year_vor.items():
+        for player_key, data in year_vor.items():
             if data['vor'] > max_vor:
                 max_vor = data['vor']
-                mvp = player
+                # Use display name from data
+                mvp = data.get('name', player_key)
                 mvp_year = year
                 mvp_info = data
 
@@ -731,7 +1194,7 @@ def calculate_punt_god(all_data: Dict) -> Tuple[str, float, Dict]:
     manager_points = defaultdict(lambda: {'total': 0, 'D/ST': 0, 'K': 0, 'P': 0})
 
     # Aggregate special teams points by manager
-    for player_name, seasons in all_data['player_seasons'].items():
+    for player_key, seasons in all_data['player_seasons'].items():
         for year, player_data in seasons.items():
             position = player_data.get('position', '')
             points = player_data.get('points', 0)
@@ -769,33 +1232,41 @@ def calculate_five_year_vor(vor_data: Dict) -> Tuple[List[Dict], List[Dict]]:
         'seasons_played': 0,
         'years': [],
         'positions': set(),
-        'player_id': None
+        'player_id': None,
+        'name': None  # Track display name
     })
 
     # Aggregate VOR across all years
     for year, year_vor in vor_data.items():
-        for player, data in year_vor.items():
-            player_stats[player]['total_vor'] += data['vor']
-            player_stats[player]['seasons_played'] += 1
-            player_stats[player]['years'].append(year)
-            player_stats[player]['positions'].add(data['position'])
-            if data.get('player_id') and not player_stats[player]['player_id']:
-                player_stats[player]['player_id'] = data['player_id']
+        for player_key, data in year_vor.items():
+            player_stats[player_key]['total_vor'] += data['vor']
+            player_stats[player_key]['seasons_played'] += 1
+            player_stats[player_key]['years'].append(year)
+            player_stats[player_key]['positions'].add(data['position'])
+            if data.get('player_id') and not player_stats[player_key]['player_id']:
+                player_stats[player_key]['player_id'] = data['player_id']
+            # Update name (use most recent)
+            if data.get('name'):
+                player_stats[player_key]['name'] = data['name']
 
     # Calculate totals and averages
     total_vor_list = []
     average_vor_list = []
 
-    for player, stats in player_stats.items():
+    for player_key, stats in player_stats.items():
         total_vor = stats['total_vor']
         seasons = stats['seasons_played']
         avg_vor = total_vor / seasons if seasons > 0 else 0
 
         # Get primary position (most common)
         position = list(stats['positions'])[0] if stats['positions'] else 'UNKNOWN'
+        
+        # Get display name, fall back to player_key if not available
+        display_name = stats['name'] if stats['name'] else player_key
 
         player_data = {
-            'player': player,
+            'player': display_name,  # Use display name
+            'player_key': player_key,  # Keep key for lookups
             'total_vor': total_vor,
             'avg_vor': avg_vor,
             'seasons_played': seasons,
@@ -862,9 +1333,12 @@ def get_top_player_seasons(vor_data: Dict, limit: int = 10) -> List[Dict]:
     all_player_seasons = []
 
     for year, year_vor in vor_data.items():
-        for player, data in year_vor.items():
+        for player_key, data in year_vor.items():
+            # Use display name from data
+            display_name = data.get('name', player_key)
             all_player_seasons.append({
-                'player': player,
+                'player': display_name,
+                'player_key': player_key,
                 'year': year,
                 'vor': data['vor'],
                 'points': data['points'],
@@ -1088,7 +1562,7 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
 
                 # Add player info next to headshot
                 info_text = f"{player_name}\n"
-                info_text += f"{player_data['year']} • {player_data['position']}\n"
+                info_text += f"{player_data['year']} Ã¢â‚¬Â¢ {player_data['position']}\n"
                 info_text += f"VOR: {player_data['vor']:.1f}"
 
                 player_ax.text(0.35, 0.5, info_text, transform=player_ax.transAxes,
@@ -1097,8 +1571,8 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
             else:
                 # No headshot, just show text
                 info_text = f"#{idx+1} {player_name}\n"
-                info_text += f"{player_data['year']} • {player_data['position']}\n"
-                info_text += f"VOR: {player_data['vor']:.1f} • Pts: {player_data['points']:.1f}"
+                info_text += f"{player_data['year']} Ã¢â‚¬Â¢ {player_data['position']}\n"
+                info_text += f"VOR: {player_data['vor']:.1f} Ã¢â‚¬Â¢ Pts: {player_data['points']:.1f}"
 
                 player_ax.text(0.5, 0.5, info_text, transform=player_ax.transAxes,
                              fontsize=8, ha='center', va='center',
@@ -1150,6 +1624,9 @@ def generate_report(all_data: Dict):
         return
 
     generated_at = datetime.now()
+    
+    # Calculate VOR early since it's needed by multiple sections
+    vor_data = calculate_value_over_replacement(all_data)
 
     report = []
     report.append("=" * 80)
@@ -1160,13 +1637,13 @@ def generate_report(all_data: Dict):
     # ========================================
     # CORE STATISTICS
     # ========================================
-    report.append("🏆 CORE AWARDS")
+    report.append("Ã°Å¸Ââ€  CORE AWARDS")
     report.append("=" * 80)
     report.append("")
 
     # All-Time Scoring Leader
     scoring_leader = max(team_stats.items(), key=lambda x: x[1]['total_points_for'])
-    report.append(f"📊 ALL-TIME SCORING LEADER: {scoring_leader[0]}")
+    report.append(f"Ã°Å¸â€œÅ  ALL-TIME SCORING LEADER: {scoring_leader[0]}")
     report.append(f"   Total Points: {scoring_leader[1]['total_points_for']:.2f}")
     report.append("")
 
@@ -1180,13 +1657,13 @@ def generate_report(all_data: Dict):
 
     # Unluckiest Manager
     unluckiest = max(team_stats.items(), key=lambda x: x[1]['total_points_against'])
-    report.append(f"😢 UNLUCKIEST MANAGER: {unluckiest[0]}")
+    report.append(f"Ã°Å¸ËœÂ¢ UNLUCKIEST MANAGER: {unluckiest[0]}")
     report.append(f"   Points Against: {unluckiest[1]['total_points_against']:.2f}")
     report.append("")
 
     # Luckiest Manager
     luckiest = min(team_stats.items(), key=lambda x: x[1]['total_points_against'])
-    report.append(f"🍀 LUCKIEST MANAGER: {luckiest[0]}")
+    report.append(f"Ã°Å¸Ââ‚¬ LUCKIEST MANAGER: {luckiest[0]}")
     report.append(f"   Points Against: {luckiest[1]['total_points_against']:.2f}")
     report.append("")
 
@@ -1205,7 +1682,7 @@ def generate_report(all_data: Dict):
                    best_record_team[1]['ties'])
     win_pct = (best_record_team[1]['wins'] + 0.5 * best_record_team[1]['ties']) / total_games * 100
 
-    report.append(f"🏅 BEST ALL-TIME RECORD: {best_record_team[0]}")
+    report.append(f"Ã°Å¸Ââ€¦ BEST ALL-TIME RECORD: {best_record_team[0]}")
     report.append(f"   Record: {best_record_team[1]['wins']}-{best_record_team[1]['losses']}-"
                  f"{best_record_team[1]['ties']} ({win_pct:.1f}%)")
     report.append("")
@@ -1233,14 +1710,14 @@ def generate_report(all_data: Dict):
                 highest_week_score = max_score
                 highest_week_team = team
 
-    report.append(f"💯 HIGHEST SINGLE WEEK: {highest_week_team}")
+    report.append(f"Ã°Å¸â€™Â¯ HIGHEST SINGLE WEEK: {highest_week_team}")
     report.append(f"   Score: {highest_week_score:.2f}")
     report.append("")
 
     # Punt God Award
     punt_god, punt_god_points, punt_breakdown = calculate_punt_god(all_data)
     if punt_god:
-        report.append(f"🦶 PUNT GOD (Most D/ST, K, P Points): {punt_god}")
+        report.append(f"Ã°Å¸Â¦Â¶ PUNT GOD (Most D/ST, K, P Points): {punt_god}")
         report.append(f"   Total Special Teams Points: {punt_god_points:.2f}")
         report.append(f"   Defense/ST: {punt_breakdown['D/ST']:.2f} | "
                      f"Kicker: {punt_breakdown['K']:.2f} | "
@@ -1251,12 +1728,12 @@ def generate_report(all_data: Dict):
     # INJURY ANALYSIS
     # ========================================
     report.append("=" * 80)
-    report.append("🏥 INJURY ANALYSIS")
+    report.append("Ã°Å¸ÂÂ¥ INJURY ANALYSIS")
     report.append("=" * 80)
     report.append("")
 
     most_injured = max(team_stats.items(), key=lambda x: x[1]['injury_weeks'])
-    report.append(f"🤕 MOST INJURED TEAM: {most_injured[0]}")
+    report.append(f"Ã°Å¸Â¤â€¢ MOST INJURED TEAM: {most_injured[0]}")
     report.append(f"   Total Injury-Weeks: {most_injured[1]['injury_weeks']}")
     report.append(f"   Worst Single Week: {most_injured[1]['max_injuries_single_week']} injuries")
 
@@ -1275,10 +1752,60 @@ def generate_report(all_data: Dict):
     report.append("")
 
     # ========================================
+    # WEIGHTED INJURY IMPACT
+    # ========================================
+    report.append("=" * 80)
+    report.append("ðŸ’¸ INJURY IMPACT (Draft Capital Weighted)")
+    report.append("=" * 80)
+    report.append("")
+    
+    report.append("Draft capital = inverse round (Rd 1 = 15 pts, Rd 15 = 1 pt)")
+    report.append("Keepers ranked by prior year VOR and assigned rounds 1-6")
+    report.append("Undrafted/waiver players excluded")
+    report.append("")
+    
+    weighted_injury_data = calculate_weighted_injury_impact(all_data, vor_data)
+    
+    # Weighted injury score rankings
+    report.append("WEIGHTED INJURY SCORE RANKINGS:")
+    sorted_scores = sorted(weighted_injury_data['manager_scores'].items(), 
+                          key=lambda x: x[1], reverse=True)
+    for i, (manager, score) in enumerate(sorted_scores, 1):
+        report.append(f"  {i:2d}. {manager:30s} {score:6.0f} pts lost")
+    report.append("")
+    
+    # Most costly single injuries
+    report.append("MOST COSTLY SINGLE INJURIES:")
+    most_costly = weighted_injury_data['most_costly']
+    sorted_costly = sorted(most_costly.items(), 
+                          key=lambda x: x[1]['total_impact'], reverse=True)
+    for manager, injury in sorted_costly:
+        # Convert draft capital back to approximate round for display
+        approx_round = 16 - injury['draft_capital']
+        year = injury.get('year', '')
+        report.append(f"  {manager:25s}: {injury['player_name']} ({year}, Rd {approx_round}) - "
+                     f"{injury['weeks']} wks Ã— {injury['draft_capital']} pts = "
+                     f"{injury['total_impact']} pts lost")
+    report.append("")
+    
+    # Season-ending injuries detected
+    season_ending = weighted_injury_data['season_ending']
+    if any(season_ending.values()):
+        report.append("SEASON-ENDING INJURIES DETECTED:")
+        report.append("(Players dropped while injured who never played again that season)")
+        for manager, injuries in sorted(season_ending.items()):
+            for inj in injuries:
+                report.append(f"  {manager}: {inj['player_name']} ({inj['year']}) - "
+                             f"last rostered wk {inj['last_rostered_week']}, "
+                             f"+{inj['remaining_weeks']} wks credited = "
+                             f"+{inj['additional_impact']:.0f} pts")
+        report.append("")
+
+    # ========================================
     # NEMESIS & VICTIMS (FPS-Style Rivalry Stats)
     # ========================================
     report.append("=" * 80)
-    report.append("⚔️  NEMESIS & VICTIMS")
+    report.append("Ã¢Å¡â€Ã¯Â¸Â  NEMESIS & VICTIMS")
     report.append("=" * 80)
     report.append("")
 
@@ -1293,7 +1820,7 @@ def generate_report(all_data: Dict):
         # Nemesis (who crushed them the most)
         if data['nemesis']:
             nem = data['nemesis']
-            report.append(f"  💀 Nemesis: {nem['opponent']}")
+            report.append(f"  Ã°Å¸â€™â‚¬ Nemesis: {nem['opponent']}")
             report.append(f"     Scored {nem['avg_points_against']:.1f} pts/game against you "
                          f"({nem['total_points_against']:.1f} total, {nem['games']} games)")
             report.append(f"     Your record vs them: {nem['record']}")
@@ -1301,7 +1828,7 @@ def generate_report(all_data: Dict):
         # Victim (who they crushed the most)
         if data['victim']:
             vic = data['victim']
-            report.append(f"  🎯 Victim: {vic['opponent']}")
+            report.append(f"  Ã°Å¸Å½Â¯ Victim: {vic['opponent']}")
             report.append(f"     You scored {vic['avg_points_for']:.1f} pts/game against them "
                          f"({vic['total_points_for']:.1f} total, {vic['games']} games)")
             report.append(f"     Your record vs them: {vic['record']}")
@@ -1312,16 +1839,13 @@ def generate_report(all_data: Dict):
     # PLAYER DEEP DIVE
     # ========================================
     report.append("=" * 80)
-    report.append("⭐ PLAYER DEEP DIVE")
+    report.append("Ã¢Â­Â PLAYER DEEP DIVE")
     report.append("=" * 80)
     report.append("")
 
-    # Calculate VOR
-    vor_data = calculate_value_over_replacement(all_data)
-
     # Most Valuable Player (Single Season)
     mvp, mvp_year, mvp_info = find_most_valuable_player(vor_data)
-    report.append(f"🌟 MOST VALUABLE PLAYER (Single Season): {mvp}")
+    report.append(f"Ã°Å¸Å’Å¸ MOST VALUABLE PLAYER (Single Season): {mvp}")
     report.append(f"   Season: {mvp_year}")
     report.append(f"   Position: {mvp_info['position']}")
     report.append(f"   Total Points: {mvp_info['points']:.2f}")
@@ -1336,7 +1860,7 @@ def generate_report(all_data: Dict):
     if total_vor_rankings:
         top_total = total_vor_rankings[0]
         years_str = ', '.join(str(y) for y in top_total['years'])
-        report.append(f"🏆 MOST VALUABLE PLAYER (5-Year Total VOR): {top_total['player']}")
+        report.append(f"Ã°Å¸Ââ€  MOST VALUABLE PLAYER (5-Year Total VOR): {top_total['player']}")
         report.append(f"   Position: {top_total['position']}")
         report.append(f"   Total VOR (2021-2025): {top_total['total_vor']:.2f}")
         report.append(f"   Seasons Played: {top_total['seasons_played']} ({years_str})")
@@ -1347,7 +1871,7 @@ def generate_report(all_data: Dict):
     if avg_vor_rankings:
         top_avg = avg_vor_rankings[0]
         years_str = ', '.join(str(y) for y in top_avg['years'])
-        report.append(f"⭐ MOST VALUABLE PLAYER (5-Year Average VOR): {top_avg['player']}")
+        report.append(f"Ã¢Â­Â MOST VALUABLE PLAYER (5-Year Average VOR): {top_avg['player']}")
         report.append(f"   Position: {top_avg['position']}")
         report.append(f"   Average VOR per Season: {top_avg['avg_vor']:.2f}")
         report.append(f"   Seasons Played: {top_avg['seasons_played']} ({years_str})")
@@ -1364,9 +1888,10 @@ def generate_report(all_data: Dict):
                      f"{player_data['seasons_played']} seasons")
     report.append("")
 
-    # Top 10 by Average VOR
-    report.append("TOP 10 PLAYERS BY 5-YEAR AVERAGE VOR:")
-    for i, player_data in enumerate(avg_vor_rankings[:10], 1):
+    # Top 10 by Average VOR (minimum 2 seasons to qualify)
+    report.append("TOP 10 PLAYERS BY 5-YEAR AVERAGE VOR (Min. 2 Seasons):")
+    qualified_avg_vor = [p for p in avg_vor_rankings if p['seasons_played'] >= 2]
+    for i, player_data in enumerate(qualified_avg_vor[:10], 1):
         report.append(f"  {i:2d}. {player_data['player']:25s} - "
                      f"{player_data['position']:4s} - "
                      f"Avg: {player_data['avg_vor']:5.2f} - "
@@ -1378,9 +1903,10 @@ def generate_report(all_data: Dict):
     report.append("TOP 10 MOST VALUABLE PLAYER SEASONS:")
     all_player_seasons = []
     for year, year_vor in vor_data.items():
-        for player, data in year_vor.items():
+        for player_key, data in year_vor.items():
+            display_name = data.get('name', player_key)
             all_player_seasons.append({
-                'player': player,
+                'player': display_name,
                 'year': year,
                 'vor': data['vor'],
                 'points': data['points'],
@@ -1396,67 +1922,49 @@ def generate_report(all_data: Dict):
     report.append("")
 
     # Best Draft Picks
-    best_picks = find_best_draft_picks(all_data, vor_data)
+    best_picks, round_average_by_year = find_best_draft_picks(all_data, vor_data)
 
-    report.append("🎯 BEST DRAFT PICKS (By Value Score):")
+    report.append("ðŸŽ¯ BEST DRAFT PICKS (By Î” vs Round Average):")
     non_keeper_picks = [p for p in best_picks if not p['is_keeper']][:10]
     for i, pick in enumerate(non_keeper_picks, 1):
         report.append(f"  {i:2d}. {pick['player']:25s} ({pick['year']}) - "
-                     f"Rd {pick['round']:2d} - VOR since draft: {pick['vor']:6.2f} - "
-                     f"Seasons: {pick['seasons_contributing']:2d} - "
-                     f"Value Score: {pick['value_score']:6.2f} - {pick['team']}")
+                     f"Rd {pick['round']:2d} - VOR: {pick['vor']:6.2f} "
+                     f"(Round Avg: {pick['round_average']:6.2f}) - "
+                     f"Î”: +{pick['value_score']:6.2f} - {pick['team']}")
     report.append("")
 
     # Best Draft Pick by Year
     report.append("BEST DRAFT PICK BY YEAR (vs Round Average):")
     best_pick_by_year = []
-    round_average_by_year: Dict[int, Dict[int, float]] = {}
     for year in YEARS:
         year_picks = [p for p in best_picks if p['year'] == year and not p['is_keeper']]
         if not year_picks:
             continue
 
-        # Compute the average VOR for each round in the given year so we can find
-        # the pick that most exceeds the expectation for its draft slot.
-        round_vor_totals = defaultdict(list)
-        for pick in year_picks:
-            round_vor_totals[pick['round']].append(pick['vor'])
-
-        round_vor_avgs = {
-            rnd: sum(vors) / len(vors)
-            for rnd, vors in round_vor_totals.items()
-            if vors
-        }
-
-        round_average_by_year[year] = round_vor_avgs
-
-        def round_diff(pick):
-            return pick['vor'] - round_vor_avgs.get(pick['round'], 0)
-
-        best = max(year_picks, key=round_diff)
-        diff = round_diff(best)
+        # Find the best pick for this year (highest value_score = delta vs round avg)
+        best = max(year_picks, key=lambda p: p['value_score'])
 
         best_pick_by_year.append({
             'year': year,
             'player': best['player'],
             'round': best['round'],
             'vor': best['vor'],
-            'round_average_vor': round_vor_avgs.get(best['round'], 0),
-            'delta_vs_round': diff,
+            'round_average_vor': best['round_average'],
+            'delta_vs_round': best['value_score'],
             'seasons_contributing': best['seasons_contributing'],
             'team': best['team']
         })
 
         report.append(
             f"  {year}: {best['player']:25s} - Rd {best['round']:2d} - "
-            f"VOR since draft: {best['vor']:6.2f} (Round Avg: {round_vor_avgs.get(best['round'], 0):6.2f}) - "
-            f"Δ vs Avg: {diff:6.2f} - Seasons: {best['seasons_contributing']:2d} - {best['team']}"
+            f"VOR: {best['vor']:6.2f} (Round Avg: {best['round_average']:6.2f}) - "
+            f"Î”: +{best['value_score']:6.2f} - Seasons: {best['seasons_contributing']:2d} - {best['team']}"
         )
     report.append("")
 
     # Keeper Value
     keeper_values = calculate_keeper_value(all_data, vor_data)
-    report.append("🔒 MOST VALUE FROM KEEPERS:")
+    report.append("Ã°Å¸â€â€™ MOST VALUE FROM KEEPERS:")
     for i, (team, value) in enumerate(sorted(keeper_values.items(),
                                              key=lambda x: x[1],
                                              reverse=True), 1):
@@ -1465,7 +1973,7 @@ def generate_report(all_data: Dict):
 
     # Draft Pick Value (non-keepers, years 2-5)
     draft_values = calculate_draft_pick_value(all_data, vor_data)
-    report.append("📝 MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):")
+    report.append("Ã°Å¸â€œÂ MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):")
     for i, (team, value) in enumerate(sorted(draft_values.items(),
                                              key=lambda x: x[1],
                                              reverse=True), 1):
@@ -1476,7 +1984,7 @@ def generate_report(all_data: Dict):
     # CHAMPIONSHIP & PLAYOFF SUMMARY
     # ========================================
     report.append("=" * 80)
-    report.append("🏆 CHAMPIONSHIPS & PLAYOFF SUMMARY")
+    report.append("Ã°Å¸Ââ€  CHAMPIONSHIPS & PLAYOFF SUMMARY")
     report.append("=" * 80)
     report.append("")
 

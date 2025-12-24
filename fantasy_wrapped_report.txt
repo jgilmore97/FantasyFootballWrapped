@@ -1,0 +1,338 @@
+================================================================================
+                    ESPN FANTASY FOOTBALL WRAPPED (2021-2025)                   
+================================================================================
+
+Ã°Å¸Ââ€  CORE AWARDS
+================================================================================
+
+Ã°Å¸â€œÅ  ALL-TIME SCORING LEADER: Jack Gilmore
+   Total Points: 13997.90
+
+ALL-TIME SCORING RANKINGS:
+   1. Jack Gilmore                   13997.90 pts
+   2. Derek Topper                   13665.68 pts
+   3. Kilian Nelson                  13195.02 pts
+   4. Nick Bergeron                  13160.94 pts
+   5. Jackson Slaughter              13070.64 pts
+   6. Peter Martino                  12955.64 pts
+   7. Veronica Agne                  12889.96 pts
+   8. Maggie Mansfield               12193.06 pts
+   9. Nadia Moumine                  11955.42 pts
+  10. Soph Nelson                    11690.30 pts
+
+Ã°Å¸ËœÂ¢ UNLUCKIEST MANAGER: Derek Topper
+   Points Against: 13383.00
+
+Ã°Å¸Ââ‚¬ LUCKIEST MANAGER: Kilian Nelson
+   Points Against: 12367.44
+
+LUCK RANKINGS (Points Against - Lower is Luckier):
+   1. Kilian Nelson                  12367.44 pts against
+   2. Maggie Mansfield               12708.52 pts against
+   3. Jack Gilmore                   12732.92 pts against
+   4. Jackson Slaughter              12855.26 pts against
+   5. Nadia Moumine                  12895.78 pts against
+   6. Veronica Agne                  12900.42 pts against
+   7. Peter Martino                  12948.22 pts against
+   8. Soph Nelson                    12949.80 pts against
+   9. Nick Bergeron                  13033.20 pts against
+  10. Derek Topper                   13383.00 pts against
+
+Ã°Å¸Ââ€¦ BEST ALL-TIME RECORD: Jack Gilmore
+   Record: 52-28-0 (65.0%)
+
+ALL-TIME WIN PERCENTAGE RANKINGS:
+   1. Jack Gilmore                   52-28- 0 ( 65.0%)
+   2. Kilian Nelson                  49-30- 0 ( 62.0%)
+   3. Veronica Agne                  43-37- 0 ( 53.8%)
+   4. Jackson Slaughter              42-38- 0 ( 52.5%)
+   5. Derek Topper                   42-39- 1 ( 51.8%)
+   6. Nick Bergeron                  41-39- 1 ( 51.2%)
+   7. Peter Martino                  41-40- 0 ( 50.6%)
+   8. Maggie Mansfield               33-46- 0 ( 41.8%)
+   9. Nadia Moumine                  30-49- 0 ( 38.0%)
+  10. Soph Nelson                    26-53- 0 ( 32.9%)
+
+Ã°Å¸â€™Â¯ HIGHEST SINGLE WEEK: Derek Topper
+   Score: 250.00
+
+Ã°Å¸Â¦Â¶ PUNT GOD (Most D/ST, K, P Points): Peter Martino
+   Total Special Teams Points: 3333.10
+   Defense/ST: 1667.00 | Kicker: 1160.00 | Punter: 506.10
+
+================================================================================
+Ã°Å¸ÂÂ¥ INJURY ANALYSIS
+================================================================================
+
+Ã°Å¸Â¤â€¢ MOST INJURED TEAM: Nadia Moumine
+   Total Injury-Weeks: 81
+   Worst Single Week: 6 injuries
+   Frequent Flyer: Patrick Mahomes (16 injury-weeks)
+
+INJURY-WEEK RANKINGS:
+   1. Nadia Moumine                    81 injury-weeks (max 6 in one week)
+   2. Kilian Nelson                    61 injury-weeks (max 4 in one week)
+   3. Jackson Slaughter                51 injury-weeks (max 3 in one week)
+   4. Soph Nelson                      46 injury-weeks (max 3 in one week)
+   5. Peter Martino                    40 injury-weeks (max 3 in one week)
+   6. Veronica Agne                    38 injury-weeks (max 3 in one week)
+   7. Derek Topper                     33 injury-weeks (max 1 in one week)
+   8. Maggie Mansfield                 19 injury-weeks (max 2 in one week)
+   9. Nick Bergeron                    18 injury-weeks (max 2 in one week)
+  10. Jack Gilmore                     18 injury-weeks (max 3 in one week)
+
+================================================================================
+ðŸ’¸ INJURY IMPACT (Draft Capital Weighted)
+================================================================================
+
+Draft capital = inverse round (Rd 1 = 15 pts, Rd 15 = 1 pt)
+Keepers ranked by prior year VOR and assigned rounds 1-6
+Undrafted/waiver players excluded
+
+WEIGHTED INJURY SCORE RANKINGS:
+   1. Nadia Moumine                     276 pts lost
+   2. Derek Topper                      269 pts lost
+   3. Kilian Nelson                     215 pts lost
+   4. Jack Gilmore                      210 pts lost
+   5. Veronica Agne                     147 pts lost
+   6. Peter Martino                     144 pts lost
+   7. Soph Nelson                       142 pts lost
+   8. Jackson Slaughter                 126 pts lost
+   9. Maggie Mansfield                   48 pts lost
+  10. Nick Bergeron                      34 pts lost
+
+MOST COSTLY SINGLE INJURIES:
+  Derek Topper             : Calvin Ridley (2021, Rd 3) - 17 wks Ã— 13 pts = 221 pts lost
+  Jack Gilmore             : Calvin Ridley (2025, Rd 7) - 17 wks Ã— 9 pts = 153 pts lost
+  Kilian Nelson            : Travis Hunter (2025, Rd 8) - 16 wks Ã— 8 pts = 128 pts lost
+  Nadia Moumine            : Sam LaPorta (2025, Rd 9) - 17 wks Ã— 7 pts = 119 pts lost
+  Soph Nelson              : Jayden Daniels (2025, Rd 9) - 16 wks Ã— 7 pts = 112 pts lost
+  Veronica Agne            : Justin Fields (2025, Rd 10) - 17 wks Ã— 6 pts = 102 pts lost
+  Peter Martino            : Cam Skattebo (2025, Rd 10) - 16 wks Ã— 6 pts = 96 pts lost
+  Jackson Slaughter        : J.K. Dobbins (2025, Rd 11) - 17 wks Ã— 5 pts = 85 pts lost
+  Maggie Mansfield         : Tucker Kraft (2025, Rd 13) - 16 wks Ã— 3 pts = 48 pts lost
+  Nick Bergeron            : James Conner (2025, Rd 15) - 17 wks Ã— 1 pts = 17 pts lost
+
+SEASON-ENDING INJURIES DETECTED:
+(Players dropped while injured who never played again that season)
+  Jack Gilmore: Calvin Ridley (2025) - last rostered wk 11, +6 wks credited = +54 pts
+  Jack Gilmore: Jerome Ford (2025) - last rostered wk 3, +14 wks credited = +42 pts
+  Jackson Slaughter: Najee Harris (2025) - last rostered wk 10, +7 wks credited = +7 pts
+  Kilian Nelson: Tyler Bass (2025) - last rostered wk 7, +10 wks credited = +10 pts
+  Nadia Moumine: Sam LaPorta (2025) - last rostered wk 14, +3 wks credited = +21 pts
+  Nadia Moumine: Austin Ekeler (2025) - last rostered wk 3, +14 wks credited = +70 pts
+  Nick Bergeron: James Conner (2025) - last rostered wk 3, +14 wks credited = +14 pts
+  Nick Bergeron: Tyreek Hill (2025) - last rostered wk 6, +11 wks credited = +11 pts
+  Veronica Agne: Justin Fields (2025) - last rostered wk 13, +4 wks credited = +24 pts
+  Veronica Agne: Braelon Allen (2025) - last rostered wk 2, +15 wks credited = +15 pts
+
+================================================================================
+Ã¢Å¡â€Ã¯Â¸Â  NEMESIS & VICTIMS
+================================================================================
+
+Derek Topper:
+  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+     Scored 183.6 pts/game against you (2019.7 total, 11 games)
+     Your record vs them: 4-7-0
+  Ã°Å¸Å½Â¯ Victim: Peter Martino
+     You scored 183.3 pts/game against them (1650.0 total, 9 games)
+     Your record vs them: 5-4-0
+
+Jack Gilmore:
+  Ã°Å¸â€™â‚¬ Nemesis: Jackson Slaughter
+     Scored 182.4 pts/game against you (1094.2 total, 6 games)
+     Your record vs them: 3-3-0
+  Ã°Å¸Å½Â¯ Victim: Nick Bergeron
+     You scored 186.1 pts/game against them (1116.7 total, 6 games)
+     Your record vs them: 4-2-0
+
+Jackson Slaughter:
+  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+     Scored 177.6 pts/game against you (1065.4 total, 6 games)
+     Your record vs them: 3-3-0
+  Ã°Å¸Å½Â¯ Victim: Jack Gilmore
+     You scored 182.4 pts/game against them (1094.2 total, 6 games)
+     Your record vs them: 3-3-0
+
+Kilian Nelson:
+  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+     Scored 178.2 pts/game against you (1960.5 total, 11 games)
+     Your record vs them: 3-8-0
+  Ã°Å¸Å½Â¯ Victim: Derek Topper
+     You scored 182.3 pts/game against them (1640.6 total, 9 games)
+     Your record vs them: 9-0-0
+
+Maggie Mansfield:
+  Ã°Å¸â€™â‚¬ Nemesis: Jackson Slaughter
+     Scored 181.8 pts/game against you (1272.3 total, 7 games)
+     Your record vs them: 1-6-0
+  Ã°Å¸Å½Â¯ Victim: Veronica Agne
+     You scored 177.8 pts/game against them (1244.3 total, 7 games)
+     Your record vs them: 5-2-0
+
+Nadia Moumine:
+  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+     Scored 176.4 pts/game against you (1763.6 total, 10 games)
+     Your record vs them: 4-6-0
+  Ã°Å¸Å½Â¯ Victim: Jack Gilmore
+     You scored 158.9 pts/game against them (1589.4 total, 10 games)
+     Your record vs them: 4-6-0
+
+Nick Bergeron:
+  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+     Scored 186.1 pts/game against you (1116.7 total, 6 games)
+     Your record vs them: 2-4-0
+  Ã°Å¸Å½Â¯ Victim: Soph Nelson
+     You scored 177.1 pts/game against them (1593.8 total, 9 games)
+     Your record vs them: 8-1-0
+
+Peter Martino:
+  Ã°Å¸â€™â‚¬ Nemesis: Derek Topper
+     Scored 183.3 pts/game against you (1650.0 total, 9 games)
+     Your record vs them: 4-5-0
+  Ã°Å¸Å½Â¯ Victim: Maggie Mansfield
+     You scored 166.7 pts/game against them (1166.9 total, 7 games)
+     Your record vs them: 3-4-0
+
+Soph Nelson:
+  Ã°Å¸â€™â‚¬ Nemesis: Nick Bergeron
+     Scored 177.1 pts/game against you (1593.8 total, 9 games)
+     Your record vs them: 1-8-0
+  Ã°Å¸Å½Â¯ Victim: Veronica Agne
+     You scored 155.9 pts/game against them (1559.2 total, 10 games)
+     Your record vs them: 3-7-0
+
+Veronica Agne:
+  Ã°Å¸â€™â‚¬ Nemesis: Maggie Mansfield
+     Scored 177.8 pts/game against you (1244.3 total, 7 games)
+     Your record vs them: 2-5-0
+  Ã°Å¸Å½Â¯ Victim: Jack Gilmore
+     You scored 173.2 pts/game against them (1212.1 total, 7 games)
+     Your record vs them: 5-2-0
+
+================================================================================
+Ã¢Â­Â PLAYER DEEP DIVE
+================================================================================
+
+Ã°Å¸Å’Å¸ MOST VALUABLE PLAYER (Single Season): Cooper Kupp
+   Season: 2021
+   Position: WR
+   Total Points: 439.50
+   Value Over Replacement: 312.50
+   Team: Soph Nelson
+
+Ã°Å¸Ââ€  MOST VALUABLE PLAYER (5-Year Total VOR): Josh Allen
+   Position: QB
+   Total VOR (2021-2025): 1248.80
+   Seasons Played: 5 (2021, 2022, 2023, 2024, 2025)
+   Average VOR per Season: 249.76
+
+Ã¢Â­Â MOST VALUABLE PLAYER (5-Year Average VOR): Josh Allen
+   Position: QB
+   Average VOR per Season: 249.76
+   Seasons Played: 5 (2021, 2022, 2023, 2024, 2025)
+   Total VOR (2021-2025): 1248.80
+
+TOP 10 PLAYERS BY 5-YEAR TOTAL VOR:
+   1. Josh Allen                - QB   - Total: 1248.80 - Avg: 249.76 - 5 seasons
+   2. Jalen Hurts               - QB   - Total: 989.88 - Avg: 197.98 - 5 seasons
+   3. Patrick Mahomes           - QB   - Total: 965.56 - Avg: 193.11 - 5 seasons
+   4. Ja'Marr Chase             - WR   - Total: 843.22 - Avg: 168.64 - 5 seasons
+   5. Amon-Ra St. Brown         - WR   - Total: 791.78 - Avg: 158.36 - 5 seasons
+   6. Justin Herbert            - QB   - Total: 790.90 - Avg: 158.18 - 5 seasons
+   7. Davante Adams             - WR   - Total: 774.90 - Avg: 154.98 - 5 seasons
+   8. Lamar Jackson             - QB   - Total: 769.68 - Avg: 153.94 - 5 seasons
+   9. Justin Jefferson          - WR   - Total: 760.34 - Avg: 152.07 - 5 seasons
+  10. CeeDee Lamb               - WR   - Total: 756.40 - Avg: 151.28 - 5 seasons
+
+TOP 10 PLAYERS BY 5-YEAR AVERAGE VOR (Min. 2 Seasons):
+   1. Josh Allen                - QB   - Avg: 249.76 - Total: 1248.80 - 5 seasons
+   2. Tom Brady                 - QB   - Avg: 206.03 - Total: 412.06 - 2 seasons
+   3. Jahmyr Gibbs              - RB   - Avg: 198.87 - Total: 596.60 - 3 seasons
+   4. Jalen Hurts               - QB   - Avg: 197.98 - Total: 989.88 - 5 seasons
+   5. Patrick Mahomes           - QB   - Avg: 193.11 - Total: 965.56 - 5 seasons
+   6. Bijan Robinson            - RB   - Avg: 187.67 - Total: 563.00 - 3 seasons
+   7. Ja'Marr Chase             - WR   - Avg: 168.64 - Total: 843.22 - 5 seasons
+   8. Amon-Ra St. Brown         - WR   - Avg: 158.36 - Total: 791.78 - 5 seasons
+   9. Justin Herbert            - QB   - Avg: 158.18 - Total: 790.90 - 5 seasons
+  10. Davante Adams             - WR   - Avg: 154.98 - Total: 774.90 - 5 seasons
+
+TOP 10 MOST VALUABLE PLAYER SEASONS:
+   1. Cooper Kupp               (2021) - WR   - VOR: 312.50 - Soph Nelson
+   2. Patrick Mahomes           (2022) - QB   - VOR: 304.78 - Nadia Moumine
+   3. Josh Allen                (2022) - QB   - VOR: 282.90 - Jack Gilmore
+   4. Josh Allen                (2021) - QB   - VOR: 280.86 - Jack Gilmore
+   5. Christian McCaffrey       (2023) - RB   - VOR: 273.70 - Peter Martino
+   6. Lamar Jackson             (2024) - QB   - VOR: 267.02 - Maggie Mansfield
+   7. Jalen Hurts               (2022) - QB   - VOR: 265.42 - Derek Topper
+   8. Ja'Marr Chase             (2024) - WR   - VOR: 265.20 - Jackson Slaughter
+   9. Christian McCaffrey       (2025) - RB   - VOR: 261.90 - Peter Martino
+  10. CeeDee Lamb               (2023) - WR   - VOR: 261.40 - Peter Martino
+
+ðŸŽ¯ BEST DRAFT PICKS (By Î” vs Round Average):
+   1. Ja'Marr Chase             (2021) - Rd  9 - VOR: 843.22 (Round Avg:  73.76) - Î”: +769.46 - Jackson Slaughter
+   2. Amon-Ra St. Brown         (2021) - Rd 17 - VOR: 791.78 (Round Avg:  60.63) - Î”: +731.15 - Soph Nelson
+   3. Jalen Hurts               (2021) - Rd  6 - VOR: 989.88 (Round Avg: 353.39) - Î”: +636.49 - Derek Topper
+   4. Josh Allen                (2021) - Rd  1 - VOR: 1248.80 (Round Avg: 614.82) - Î”: +633.98 - Jack Gilmore
+   5. Amon-Ra St. Brown         (2022) - Rd  8 - VOR: 691.48 (Round Avg: 100.85) - Î”: +590.63 - Veronica Agne
+   6. CeeDee Lamb               (2021) - Rd  4 - VOR: 756.40 (Round Avg: 242.77) - Î”: +513.63 - Peter Martino
+   7. Justin Herbert            (2021) - Rd  3 - VOR: 790.90 (Round Avg: 351.07) - Î”: +439.83 - Soph Nelson
+   8. Jared Goff                (2023) - Rd 11 - VOR: 465.22 (Round Avg:  32.35) - Î”: +432.87 - Veronica Agne
+   9. James Cook III            (2022) - Rd 13 - VOR: 422.50 (Round Avg:  -5.45) - Î”: +427.95 - Maggie Mansfield
+  10. Jahmyr Gibbs              (2023) - Rd  7 - VOR: 596.60 (Round Avg: 173.56) - Î”: +423.04 - Soph Nelson
+
+BEST DRAFT PICK BY YEAR (vs Round Average):
+  2021: Ja'Marr Chase             - Rd  9 - VOR: 843.22 (Round Avg:  73.76) - Î”: +769.46 - Seasons:  5 - Jackson Slaughter
+  2022: Amon-Ra St. Brown         - Rd  8 - VOR: 691.48 (Round Avg: 100.85) - Î”: +590.63 - Seasons:  4 - Veronica Agne
+  2023: Jared Goff                - Rd 11 - VOR: 465.22 (Round Avg:  32.35) - Î”: +432.87 - Seasons:  3 - Veronica Agne
+  2024: Baker Mayfield            - Rd 14 - VOR: 323.42 (Round Avg:  -0.11) - Î”: +323.53 - Seasons:  2 - Maggie Mansfield
+  2025: Trevor Lawrence           - Rd 11 - VOR: 171.48 (Round Avg:   5.57) - Î”: +165.91 - Seasons:  1 - Derek Topper
+
+Ã°Å¸â€â€™ MOST VALUE FROM KEEPERS:
+   1. Jackson Slaughter              Total Keeper VOR: 2900.06
+   2. Jack Gilmore                   Total Keeper VOR: 2834.32
+   3. Derek Topper                   Total Keeper VOR: 2660.22
+   4. Kilian Nelson                  Total Keeper VOR: 2340.42
+   5. Maggie Mansfield               Total Keeper VOR: 2227.60
+   6. Veronica Agne                  Total Keeper VOR: 2213.26
+   7. Peter Martino                  Total Keeper VOR: 2212.30
+   8. Nadia Moumine                  Total Keeper VOR: 1789.32
+   9. Nick Bergeron                  Total Keeper VOR: 1754.08
+  10. Soph Nelson                    Total Keeper VOR: 1567.28
+
+Ã°Å¸â€œÂ MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):
+   1. Derek Topper                   Total Draft Pick VOR: 1270.16
+   2. Soph Nelson                    Total Draft Pick VOR: 1009.52
+   3. Nick Bergeron                  Total Draft Pick VOR: 707.34
+   4. Jackson Slaughter              Total Draft Pick VOR: 634.68
+   5. Maggie Mansfield               Total Draft Pick VOR: 577.80
+   6. Jack Gilmore                   Total Draft Pick VOR: 533.92
+   7. Nadia Moumine                  Total Draft Pick VOR: 488.52
+   8. Kilian Nelson                  Total Draft Pick VOR: 132.38
+   9. Veronica Agne                  Total Draft Pick VOR: 113.50
+  10. Peter Martino                  Total Draft Pick VOR: -598.08
+
+================================================================================
+Ã°Å¸Ââ€  CHAMPIONSHIPS & PLAYOFF SUMMARY
+================================================================================
+
+CHAMPIONSHIP COUNT:
+  Jack Gilmore                   2 championship(s)
+  Kilian Nelson                  1 championship(s)
+  Jackson Slaughter              1 championship(s)
+
+PLAYOFF APPEARANCES:
+   1. Kilian Nelson                  4 appearances
+   2. Jack Gilmore                   4 appearances
+   3. Nick Bergeron                  3 appearances
+   4. Derek Topper                   3 appearances
+   5. Veronica Agne                  3 appearances
+   6. Soph Nelson                    2 appearances
+   7. Maggie Mansfield               2 appearances
+   8. Jackson Slaughter              2 appearances
+   9. Peter Martino                  2 appearances
+  10. Nadia Moumine                  1 appearances
+
+================================================================================
+Generated on 2025-12-24 01:47:48
+================================================================================
