@@ -1643,7 +1643,7 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
 
                 # Add player info next to headshot
                 info_text = f"{player_name}\n"
-                info_text += f"{player_data['year']} Ã¢â‚¬Â¢ {player_data['position']}\n"
+                info_text += f"{player_data['year']} • {player_data['position']}\n"
                 info_text += f"VOR: {player_data['vor']:.1f}"
 
                 player_ax.text(0.35, 0.5, info_text, transform=player_ax.transAxes,
@@ -1652,8 +1652,8 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
             else:
                 # No headshot, just show text
                 info_text = f"#{idx+1} {player_name}\n"
-                info_text += f"{player_data['year']} Ã¢â‚¬Â¢ {player_data['position']}\n"
-                info_text += f"VOR: {player_data['vor']:.1f} Ã¢â‚¬Â¢ Pts: {player_data['points']:.1f}"
+                info_text += f"{player_data['year']} • {player_data['position']}\n"
+                info_text += f"VOR: {player_data['vor']:.1f} • Pts: {player_data['points']:.1f}"
 
                 player_ax.text(0.5, 0.5, info_text, transform=player_ax.transAxes,
                              fontsize=8, ha='center', va='center',
@@ -1718,13 +1718,13 @@ def generate_report(all_data: Dict):
     # ========================================
     # CORE STATISTICS
     # ========================================
-    report.append("Ã°Å¸Ââ€  CORE AWARDS")
+    report.append("🏆 CORE AWARDS")
     report.append("=" * 80)
     report.append("")
 
     # All-Time Scoring Leader
     scoring_leader = max(team_stats.items(), key=lambda x: x[1]['total_points_for'])
-    report.append(f"Ã°Å¸â€œÅ  ALL-TIME SCORING LEADER: {scoring_leader[0]}")
+    report.append(f"📈 ALL-TIME SCORING LEADER: {scoring_leader[0]}")
     report.append(f"   Total Points: {scoring_leader[1]['total_points_for']:.2f}")
     report.append("")
 
@@ -1738,13 +1738,13 @@ def generate_report(all_data: Dict):
 
     # Unluckiest Manager
     unluckiest = max(team_stats.items(), key=lambda x: x[1]['total_points_against'])
-    report.append(f"Ã°Å¸ËœÂ¢ UNLUCKIEST MANAGER: {unluckiest[0]}")
+    report.append(f"😬 UNLUCKIEST MANAGER: {unluckiest[0]}")
     report.append(f"   Points Against: {unluckiest[1]['total_points_against']:.2f}")
     report.append("")
 
     # Luckiest Manager
     luckiest = min(team_stats.items(), key=lambda x: x[1]['total_points_against'])
-    report.append(f"Ã°Å¸Ââ‚¬ LUCKIEST MANAGER: {luckiest[0]}")
+    report.append(f"🍀 LUCKIEST MANAGER: {luckiest[0]}")
     report.append(f"   Points Against: {luckiest[1]['total_points_against']:.2f}")
     report.append("")
 
@@ -1763,7 +1763,7 @@ def generate_report(all_data: Dict):
                    best_record_team[1]['ties'])
     win_pct = (best_record_team[1]['wins'] + 0.5 * best_record_team[1]['ties']) / total_games * 100
 
-    report.append(f"Ã°Å¸Ââ€¦ BEST ALL-TIME RECORD: {best_record_team[0]}")
+    report.append(f"🥇 BEST ALL-TIME RECORD: {best_record_team[0]}")
     report.append(f"   Record: {best_record_team[1]['wins']}-{best_record_team[1]['losses']}-"
                  f"{best_record_team[1]['ties']} ({win_pct:.1f}%)")
     report.append("")
@@ -1791,14 +1791,14 @@ def generate_report(all_data: Dict):
                 highest_week_score = max_score
                 highest_week_team = team
 
-    report.append(f"Ã°Å¸â€™Â¯ HIGHEST SINGLE WEEK: {highest_week_team}")
+    report.append(f"💥 HIGHEST SINGLE WEEK: {highest_week_team}")
     report.append(f"   Score: {highest_week_score:.2f}")
     report.append("")
 
     # Punt God Award
     punt_god, punt_god_points, punt_breakdown = calculate_punt_god(all_data)
     if punt_god:
-        report.append(f"Ã°Å¸Â¦Â¶ PUNT GOD (Most D/ST, K, P Points): {punt_god}")
+        report.append(f"🦵 PUNT GOD (Most D/ST, K, P Points): {punt_god}")
         report.append(f"   Total Special Teams Points: {punt_god_points:.2f}")
         report.append(f"   Defense/ST: {punt_breakdown['D/ST']:.2f} | "
                      f"Kicker: {punt_breakdown['K']:.2f} | "
@@ -1809,12 +1809,12 @@ def generate_report(all_data: Dict):
     # INJURY ANALYSIS
     # ========================================
     report.append("=" * 80)
-    report.append("Ã°Å¸ÂÂ¥ INJURY ANALYSIS")
+    report.append("🩺 INJURY ANALYSIS")
     report.append("=" * 80)
     report.append("")
 
     most_injured = max(team_stats.items(), key=lambda x: x[1]['injury_weeks'])
-    report.append(f"Ã°Å¸Â¤â€¢ MOST INJURED TEAM: {most_injured[0]}")
+    report.append(f"🤒 MOST INJURED TEAM: {most_injured[0]}")
     report.append(f"   Total Injury-Weeks: {most_injured[1]['injury_weeks']}")
     report.append(f"   Worst Single Week: {most_injured[1]['max_injuries_single_week']} injuries")
 
@@ -1836,7 +1836,7 @@ def generate_report(all_data: Dict):
     # WEIGHTED INJURY IMPACT
     # ========================================
     report.append("=" * 80)
-    report.append("ðŸ’¸ INJURY IMPACT (Draft Capital Weighted)")
+    report.append("💸 INJURY IMPACT (Draft Capital Weighted)")
     report.append("=" * 80)
     report.append("")
     
@@ -1846,28 +1846,6 @@ def generate_report(all_data: Dict):
     report.append("")
     
     weighted_injury_data = calculate_weighted_injury_impact(all_data, vor_data)
-    
-    # Weighted injury score rankings
-    report.append("WEIGHTED INJURY SCORE RANKINGS:")
-    sorted_scores = sorted(weighted_injury_data['manager_scores'].items(), 
-                          key=lambda x: x[1], reverse=True)
-    for i, (manager, score) in enumerate(sorted_scores, 1):
-        report.append(f"  {i:2d}. {manager:30s} {score:6.0f} pts lost")
-    report.append("")
-    
-    # Most costly single injuries
-    report.append("MOST COSTLY SINGLE INJURIES:")
-    most_costly = weighted_injury_data['most_costly']
-    sorted_costly = sorted(most_costly.items(), 
-                          key=lambda x: x[1]['total_impact'], reverse=True)
-    for manager, injury in sorted_costly:
-        # Convert draft capital back to approximate round for display
-        approx_round = 16 - injury['draft_capital']
-        year = injury.get('year', '')
-        report.append(f"  {manager:25s}: {injury['player_name']} ({year}, Rd {approx_round}) - "
-                     f"{injury['weeks']} wks Ã— {injury['draft_capital']} pts = "
-                     f"{injury['total_impact']} pts lost")
-    report.append("")
     
     # Season-ending injuries detected
     season_ending = weighted_injury_data['season_ending']
@@ -1886,7 +1864,7 @@ def generate_report(all_data: Dict):
     # NEMESIS & VICTIMS (FPS-Style Rivalry Stats)
     # ========================================
     report.append("=" * 80)
-    report.append("Ã¢Å¡â€Ã¯Â¸Â  NEMESIS & VICTIMS")
+    report.append("⚔️  NEMESIS & VICTIMS")
     report.append("=" * 80)
     report.append("")
 
@@ -1901,7 +1879,7 @@ def generate_report(all_data: Dict):
         # Nemesis (who crushed them the most)
         if data['nemesis']:
             nem = data['nemesis']
-            report.append(f"  Ã°Å¸â€™â‚¬ Nemesis: {nem['opponent']}")
+            report.append(f"  👿 Nemesis: {nem['opponent']}")
             report.append(f"     Scored {nem['avg_points_against']:.1f} pts/game against you "
                          f"({nem['total_points_against']:.1f} total, {nem['games']} games)")
             report.append(f"     Your record vs them: {nem['record']}")
@@ -1909,7 +1887,7 @@ def generate_report(all_data: Dict):
         # Victim (who they crushed the most)
         if data['victim']:
             vic = data['victim']
-            report.append(f"  Ã°Å¸Å½Â¯ Victim: {vic['opponent']}")
+            report.append(f"  🏹 Victim: {vic['opponent']}")
             report.append(f"     You scored {vic['avg_points_for']:.1f} pts/game against them "
                          f"({vic['total_points_for']:.1f} total, {vic['games']} games)")
             report.append(f"     Your record vs them: {vic['record']}")
@@ -1920,13 +1898,13 @@ def generate_report(all_data: Dict):
     # PLAYER DEEP DIVE
     # ========================================
     report.append("=" * 80)
-    report.append("Ã¢Â­Â PLAYER DEEP DIVE")
+    report.append("🔍 PLAYER DEEP DIVE")
     report.append("=" * 80)
     report.append("")
 
     # Most Valuable Player (Single Season)
     mvp, mvp_year, mvp_info = find_most_valuable_player(vor_data)
-    report.append(f"Ã°Å¸Å’Å¸ MOST VALUABLE PLAYER (Single Season): {mvp}")
+    report.append(f"🏅 MOST VALUABLE PLAYER (Single Season): {mvp}")
     report.append(f"   Season: {mvp_year}")
     report.append(f"   Position: {mvp_info['position']}")
     report.append(f"   Total Points: {mvp_info['points']:.2f}")
@@ -1941,7 +1919,7 @@ def generate_report(all_data: Dict):
     if total_vor_rankings:
         top_total = total_vor_rankings[0]
         years_str = ', '.join(str(y) for y in top_total['years'])
-        report.append(f"Ã°Å¸Ââ€  MOST VALUABLE PLAYER (5-Year Total VOR): {top_total['player']}")
+        report.append(f"🏆 MOST VALUABLE PLAYER (5-Year Total VOR): {top_total['player']}")
         report.append(f"   Position: {top_total['position']}")
         report.append(f"   Total VOR (2021-2025): {top_total['total_vor']:.2f}")
         report.append(f"   Seasons Played: {top_total['seasons_played']} ({years_str})")
@@ -1952,7 +1930,7 @@ def generate_report(all_data: Dict):
     if avg_vor_rankings:
         top_avg = avg_vor_rankings[0]
         years_str = ', '.join(str(y) for y in top_avg['years'])
-        report.append(f"Ã¢Â­Â MOST VALUABLE PLAYER (5-Year Average VOR): {top_avg['player']}")
+        report.append(f"🏅 MOST VALUABLE PLAYER (5-Year Average VOR): {top_avg['player']}")
         report.append(f"   Position: {top_avg['position']}")
         report.append(f"   Average VOR per Season: {top_avg['avg_vor']:.2f}")
         report.append(f"   Seasons Played: {top_avg['seasons_played']} ({years_str})")
@@ -2005,7 +1983,7 @@ def generate_report(all_data: Dict):
     # Best Draft Picks
     best_picks, round_average_by_year = find_best_draft_picks(all_data, vor_data)
 
-    report.append("ðŸŽ¯ BEST DRAFT PICKS (By Î” vs Round Average):")
+    report.append("🎯 BEST DRAFT PICKS (By Δ vs Round Average):")
     non_keeper_picks = [p for p in best_picks if not p['is_keeper']][:10]
     for i, pick in enumerate(non_keeper_picks, 1):
         report.append(f"  {i:2d}. {pick['player']:25s} ({pick['year']}) - "
@@ -2045,7 +2023,7 @@ def generate_report(all_data: Dict):
 
     # Keeper Value
     keeper_values = calculate_keeper_value(all_data, vor_data)
-    report.append("Ã°Å¸â€â€™ MOST VALUE FROM KEEPERS:")
+    report.append("📈 MOST VALUE FROM KEEPERS:")
     for i, (team, value) in enumerate(sorted(keeper_values.items(),
                                              key=lambda x: x[1],
                                              reverse=True), 1):
@@ -2054,7 +2032,7 @@ def generate_report(all_data: Dict):
 
     # Draft Pick Value (non-keepers, years 2-5)
     draft_values = calculate_draft_pick_value(all_data, vor_data)
-    report.append("Ã°Å¸â€œÂ MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):")
+    report.append("📊 MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):")
     for i, (team, value) in enumerate(sorted(draft_values.items(),
                                              key=lambda x: x[1],
                                              reverse=True), 1):
@@ -2065,7 +2043,7 @@ def generate_report(all_data: Dict):
     # CHAMPIONSHIP & PLAYOFF SUMMARY
     # ========================================
     report.append("=" * 80)
-    report.append("Ã°Å¸Ââ€  CHAMPIONSHIPS & PLAYOFF SUMMARY")
+    report.append("🏆 CHAMPIONSHIPS & PLAYOFF SUMMARY")
     report.append("=" * 80)
     report.append("")
 

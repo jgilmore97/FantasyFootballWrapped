@@ -2,10 +2,10 @@
                     ESPN FANTASY FOOTBALL WRAPPED (2021-2025)                   
 ================================================================================
 
-Ã°Å¸Ââ€  CORE AWARDS
+🏆 CORE AWARDS
 ================================================================================
 
-Ã°Å¸â€œÅ  ALL-TIME SCORING LEADER: Jack Gilmore
+📈 ALL-TIME SCORING LEADER: Jack Gilmore
    Total Points: 13997.90
 
 ALL-TIME SCORING RANKINGS:
@@ -20,10 +20,10 @@ ALL-TIME SCORING RANKINGS:
    9. Nadia Moumine                  11955.42 pts
   10. Soph Nelson                    11690.30 pts
 
-Ã°Å¸ËœÂ¢ UNLUCKIEST MANAGER: Derek Topper
+😬 UNLUCKIEST MANAGER: Derek Topper
    Points Against: 13383.00
 
-Ã°Å¸Ââ‚¬ LUCKIEST MANAGER: Kilian Nelson
+🍀 LUCKIEST MANAGER: Kilian Nelson
    Points Against: 12367.44
 
 LUCK RANKINGS (Points Against - Lower is Luckier):
@@ -38,7 +38,7 @@ LUCK RANKINGS (Points Against - Lower is Luckier):
    9. Nick Bergeron                  13033.20 pts against
   10. Derek Topper                   13383.00 pts against
 
-Ã°Å¸Ââ€¦ BEST ALL-TIME RECORD: Jack Gilmore
+🥇 BEST ALL-TIME RECORD: Jack Gilmore
    Record: 52-28-0 (65.0%)
 
 ALL-TIME WIN PERCENTAGE RANKINGS:
@@ -53,18 +53,18 @@ ALL-TIME WIN PERCENTAGE RANKINGS:
    9. Nadia Moumine                  30-49- 0 ( 38.0%)
   10. Soph Nelson                    26-53- 0 ( 32.9%)
 
-Ã°Å¸â€™Â¯ HIGHEST SINGLE WEEK: Derek Topper
+💥 HIGHEST SINGLE WEEK: Derek Topper
    Score: 250.00
 
-Ã°Å¸Â¦Â¶ PUNT GOD (Most D/ST, K, P Points): Peter Martino
+🦵 PUNT GOD (Most D/ST, K, P Points): Peter Martino
    Total Special Teams Points: 3333.10
    Defense/ST: 1667.00 | Kicker: 1160.00 | Punter: 506.10
 
 ================================================================================
-Ã°Å¸ÂÂ¥ INJURY ANALYSIS
+🩺 INJURY ANALYSIS
 ================================================================================
 
-Ã°Å¸Â¤â€¢ MOST INJURED TEAM: Nadia Moumine
+🤒 MOST INJURED TEAM: Nadia Moumine
    Total Injury-Weeks: 81
    Worst Single Week: 6 injuries
    Frequent Flyer: Patrick Mahomes (16 injury-weeks)
@@ -82,36 +82,12 @@ INJURY-WEEK RANKINGS:
   10. Jack Gilmore                     18 injury-weeks (max 3 in one week)
 
 ================================================================================
-ðŸ’¸ INJURY IMPACT (Draft Capital Weighted)
+ 💸 INJURY IMPACT (Draft Capital Weighted)
 ================================================================================
 
 Draft capital = inverse round (Rd 1 = 15 pts, Rd 15 = 1 pt)
 Keepers ranked by prior year VOR and assigned rounds 1-6
 Undrafted/waiver players excluded
-
-WEIGHTED INJURY SCORE RANKINGS:
-   1. Nadia Moumine                     276 pts lost
-   2. Derek Topper                      269 pts lost
-   3. Kilian Nelson                     215 pts lost
-   4. Jack Gilmore                      210 pts lost
-   5. Veronica Agne                     147 pts lost
-   6. Peter Martino                     144 pts lost
-   7. Soph Nelson                       142 pts lost
-   8. Jackson Slaughter                 126 pts lost
-   9. Maggie Mansfield                   48 pts lost
-  10. Nick Bergeron                      34 pts lost
-
-MOST COSTLY SINGLE INJURIES:
-  Derek Topper             : Calvin Ridley (2021, Rd 3) - 17 wks Ã— 13 pts = 221 pts lost
-  Jack Gilmore             : Calvin Ridley (2025, Rd 7) - 17 wks Ã— 9 pts = 153 pts lost
-  Kilian Nelson            : Travis Hunter (2025, Rd 8) - 16 wks Ã— 8 pts = 128 pts lost
-  Nadia Moumine            : Sam LaPorta (2025, Rd 9) - 17 wks Ã— 7 pts = 119 pts lost
-  Soph Nelson              : Jayden Daniels (2025, Rd 9) - 16 wks Ã— 7 pts = 112 pts lost
-  Veronica Agne            : Justin Fields (2025, Rd 10) - 17 wks Ã— 6 pts = 102 pts lost
-  Peter Martino            : Cam Skattebo (2025, Rd 10) - 16 wks Ã— 6 pts = 96 pts lost
-  Jackson Slaughter        : J.K. Dobbins (2025, Rd 11) - 17 wks Ã— 5 pts = 85 pts lost
-  Maggie Mansfield         : Tucker Kraft (2025, Rd 13) - 16 wks Ã— 3 pts = 48 pts lost
-  Nick Bergeron            : James Conner (2025, Rd 15) - 17 wks Ã— 1 pts = 17 pts lost
 
 SEASON-ENDING INJURIES DETECTED:
 (Players dropped while injured who never played again that season)
@@ -127,107 +103,107 @@ SEASON-ENDING INJURIES DETECTED:
   Veronica Agne: Braelon Allen (2025) - last rostered wk 2, +15 wks credited = +15 pts
 
 ================================================================================
-Ã¢Å¡â€Ã¯Â¸Â  NEMESIS & VICTIMS
+⚔️  NEMESIS & VICTIMS
 ================================================================================
 
 Derek Topper:
-  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+   👿 Nemesis: Jack Gilmore
      Scored 183.6 pts/game against you (2019.7 total, 11 games)
      Your record vs them: 4-7-0
-  Ã°Å¸Å½Â¯ Victim: Peter Martino
+   🏹 Victim: Peter Martino
      You scored 183.3 pts/game against them (1650.0 total, 9 games)
      Your record vs them: 5-4-0
 
 Jack Gilmore:
-  Ã°Å¸â€™â‚¬ Nemesis: Jackson Slaughter
+   👿 Nemesis: Jackson Slaughter
      Scored 182.4 pts/game against you (1094.2 total, 6 games)
      Your record vs them: 3-3-0
-  Ã°Å¸Å½Â¯ Victim: Nick Bergeron
+   🏹 Victim: Nick Bergeron
      You scored 186.1 pts/game against them (1116.7 total, 6 games)
      Your record vs them: 4-2-0
 
 Jackson Slaughter:
-  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+   👿 Nemesis: Jack Gilmore
      Scored 177.6 pts/game against you (1065.4 total, 6 games)
      Your record vs them: 3-3-0
-  Ã°Å¸Å½Â¯ Victim: Jack Gilmore
+   🏹 Victim: Jack Gilmore
      You scored 182.4 pts/game against them (1094.2 total, 6 games)
      Your record vs them: 3-3-0
 
 Kilian Nelson:
-  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+   👿 Nemesis: Jack Gilmore
      Scored 178.2 pts/game against you (1960.5 total, 11 games)
      Your record vs them: 3-8-0
-  Ã°Å¸Å½Â¯ Victim: Derek Topper
+   🏹 Victim: Derek Topper
      You scored 182.3 pts/game against them (1640.6 total, 9 games)
      Your record vs them: 9-0-0
 
 Maggie Mansfield:
-  Ã°Å¸â€™â‚¬ Nemesis: Jackson Slaughter
+   👿 Nemesis: Jackson Slaughter
      Scored 181.8 pts/game against you (1272.3 total, 7 games)
      Your record vs them: 1-6-0
-  Ã°Å¸Å½Â¯ Victim: Veronica Agne
+   🏹 Victim: Veronica Agne
      You scored 177.8 pts/game against them (1244.3 total, 7 games)
      Your record vs them: 5-2-0
 
 Nadia Moumine:
-  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+   👿 Nemesis: Jack Gilmore
      Scored 176.4 pts/game against you (1763.6 total, 10 games)
      Your record vs them: 4-6-0
-  Ã°Å¸Å½Â¯ Victim: Jack Gilmore
+   🏹 Victim: Jack Gilmore
      You scored 158.9 pts/game against them (1589.4 total, 10 games)
      Your record vs them: 4-6-0
 
 Nick Bergeron:
-  Ã°Å¸â€™â‚¬ Nemesis: Jack Gilmore
+   👿 Nemesis: Jack Gilmore
      Scored 186.1 pts/game against you (1116.7 total, 6 games)
      Your record vs them: 2-4-0
-  Ã°Å¸Å½Â¯ Victim: Soph Nelson
+   🏹 Victim: Soph Nelson
      You scored 177.1 pts/game against them (1593.8 total, 9 games)
      Your record vs them: 8-1-0
 
 Peter Martino:
-  Ã°Å¸â€™â‚¬ Nemesis: Derek Topper
+   👿 Nemesis: Derek Topper
      Scored 183.3 pts/game against you (1650.0 total, 9 games)
      Your record vs them: 4-5-0
-  Ã°Å¸Å½Â¯ Victim: Maggie Mansfield
+   🏹 Victim: Maggie Mansfield
      You scored 166.7 pts/game against them (1166.9 total, 7 games)
      Your record vs them: 3-4-0
 
 Soph Nelson:
-  Ã°Å¸â€™â‚¬ Nemesis: Nick Bergeron
+   👿 Nemesis: Nick Bergeron
      Scored 177.1 pts/game against you (1593.8 total, 9 games)
      Your record vs them: 1-8-0
-  Ã°Å¸Å½Â¯ Victim: Veronica Agne
+   🏹 Victim: Veronica Agne
      You scored 155.9 pts/game against them (1559.2 total, 10 games)
      Your record vs them: 3-7-0
 
 Veronica Agne:
-  Ã°Å¸â€™â‚¬ Nemesis: Maggie Mansfield
+   👿 Nemesis: Maggie Mansfield
      Scored 177.8 pts/game against you (1244.3 total, 7 games)
      Your record vs them: 2-5-0
-  Ã°Å¸Å½Â¯ Victim: Jack Gilmore
+   🏹 Victim: Jack Gilmore
      You scored 173.2 pts/game against them (1212.1 total, 7 games)
      Your record vs them: 5-2-0
 
 ================================================================================
-Ã¢Â­Â PLAYER DEEP DIVE
+⭐🔍 PLAYER DEEP DIVE
 ================================================================================
 
-Ã°Å¸Å’Å¸ MOST VALUABLE PLAYER (Single Season): Cooper Kupp
+🏅 MOST VALUABLE PLAYER (Single Season): Cooper Kupp
    Season: 2021
    Position: WR
    Total Points: 439.50
    Value Over Replacement: 312.50
    Team: Soph Nelson
 
-Ã°Å¸Ââ€  MOST VALUABLE PLAYER (5-Year Total VOR): Josh Allen
+🏆 MOST VALUABLE PLAYER (5-Year Total VOR): Josh Allen
    Position: QB
    Total VOR (2021-2025): 1248.80
    Seasons Played: 5 (2021, 2022, 2023, 2024, 2025)
    Average VOR per Season: 249.76
 
-Ã¢Â­Â MOST VALUABLE PLAYER (5-Year Average VOR): Josh Allen
+⭐🏅 MOST VALUABLE PLAYER (5-Year Average VOR): Josh Allen
    Position: QB
    Average VOR per Season: 249.76
    Seasons Played: 5 (2021, 2022, 2023, 2024, 2025)
@@ -269,26 +245,26 @@ TOP 10 MOST VALUABLE PLAYER SEASONS:
    9. Christian McCaffrey       (2025) - RB   - VOR: 261.90 - Peter Martino
   10. CeeDee Lamb               (2023) - WR   - VOR: 261.40 - Peter Martino
 
-ðŸŽ¯ BEST DRAFT PICKS (By Î” vs Round Average):
-   1. Ja'Marr Chase             (2021) - Rd  9 - VOR: 843.22 (Round Avg:  73.76) - Î”: +769.46 - Jackson Slaughter
-   2. Amon-Ra St. Brown         (2021) - Rd 17 - VOR: 791.78 (Round Avg:  60.63) - Î”: +731.15 - Soph Nelson
-   3. Jalen Hurts               (2021) - Rd  6 - VOR: 989.88 (Round Avg: 353.39) - Î”: +636.49 - Derek Topper
-   4. Josh Allen                (2021) - Rd  1 - VOR: 1248.80 (Round Avg: 614.82) - Î”: +633.98 - Jack Gilmore
-   5. Amon-Ra St. Brown         (2022) - Rd  8 - VOR: 691.48 (Round Avg: 100.85) - Î”: +590.63 - Veronica Agne
-   6. CeeDee Lamb               (2021) - Rd  4 - VOR: 756.40 (Round Avg: 242.77) - Î”: +513.63 - Peter Martino
-   7. Justin Herbert            (2021) - Rd  3 - VOR: 790.90 (Round Avg: 351.07) - Î”: +439.83 - Soph Nelson
-   8. Jared Goff                (2023) - Rd 11 - VOR: 465.22 (Round Avg:  32.35) - Î”: +432.87 - Veronica Agne
-   9. James Cook III            (2022) - Rd 13 - VOR: 422.50 (Round Avg:  -5.45) - Î”: +427.95 - Maggie Mansfield
-  10. Jahmyr Gibbs              (2023) - Rd  7 - VOR: 596.60 (Round Avg: 173.56) - Î”: +423.04 - Soph Nelson
+ BEST DRAFT PICKS (By  vs Round Average):
+   1. Ja'Marr Chase             (2021) - Rd  9 - VOR: 843.22 (Round Avg:  73.76) - : +769.46 - Jackson Slaughter
+   2. Amon-Ra St. Brown         (2021) - Rd 17 - VOR: 791.78 (Round Avg:  60.63) - : +731.15 - Soph Nelson
+   3. Jalen Hurts               (2021) - Rd  6 - VOR: 989.88 (Round Avg: 353.39) - : +636.49 - Derek Topper
+   4. Josh Allen                (2021) - Rd  1 - VOR: 1248.80 (Round Avg: 614.82) - : +633.98 - Jack Gilmore
+   5. Amon-Ra St. Brown         (2022) - Rd  8 - VOR: 691.48 (Round Avg: 100.85) - : +590.63 - Veronica Agne
+   6. CeeDee Lamb               (2021) - Rd  4 - VOR: 756.40 (Round Avg: 242.77) - : +513.63 - Peter Martino
+   7. Justin Herbert            (2021) - Rd  3 - VOR: 790.90 (Round Avg: 351.07) - : +439.83 - Soph Nelson
+   8. Jared Goff                (2023) - Rd 11 - VOR: 465.22 (Round Avg:  32.35) - : +432.87 - Veronica Agne
+   9. James Cook III            (2022) - Rd 13 - VOR: 422.50 (Round Avg:  -5.45) - : +427.95 - Maggie Mansfield
+  10. Jahmyr Gibbs              (2023) - Rd  7 - VOR: 596.60 (Round Avg: 173.56) - : +423.04 - Soph Nelson
 
 BEST DRAFT PICK BY YEAR (vs Round Average):
-  2021: Ja'Marr Chase             - Rd  9 - VOR: 843.22 (Round Avg:  73.76) - Î”: +769.46 - Seasons:  5 - Jackson Slaughter
-  2022: Amon-Ra St. Brown         - Rd  8 - VOR: 691.48 (Round Avg: 100.85) - Î”: +590.63 - Seasons:  4 - Veronica Agne
-  2023: Jared Goff                - Rd 11 - VOR: 465.22 (Round Avg:  32.35) - Î”: +432.87 - Seasons:  3 - Veronica Agne
-  2024: Baker Mayfield            - Rd 14 - VOR: 323.42 (Round Avg:  -0.11) - Î”: +323.53 - Seasons:  2 - Maggie Mansfield
-  2025: Trevor Lawrence           - Rd 11 - VOR: 171.48 (Round Avg:   5.57) - Î”: +165.91 - Seasons:  1 - Derek Topper
+  2021: Ja'Marr Chase             - Rd  9 - VOR: 843.22 (Round Avg:  73.76) - : +769.46 - Seasons:  5 - Jackson Slaughter
+  2022: Amon-Ra St. Brown         - Rd  8 - VOR: 691.48 (Round Avg: 100.85) - : +590.63 - Seasons:  4 - Veronica Agne
+  2023: Jared Goff                - Rd 11 - VOR: 465.22 (Round Avg:  32.35) - : +432.87 - Seasons:  3 - Veronica Agne
+  2024: Baker Mayfield            - Rd 14 - VOR: 323.42 (Round Avg:  -0.11) - : +323.53 - Seasons:  2 - Maggie Mansfield
+  2025: Trevor Lawrence           - Rd 11 - VOR: 171.48 (Round Avg:   5.57) - : +165.91 - Seasons:  1 - Derek Topper
 
-Ã°Å¸â€â€™ MOST VALUE FROM KEEPERS:
+📈 MOST VALUE FROM KEEPERS:
    1. Jackson Slaughter              Total Keeper VOR: 2900.06
    2. Jack Gilmore                   Total Keeper VOR: 2834.32
    3. Derek Topper                   Total Keeper VOR: 2660.22
@@ -300,7 +276,7 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
    9. Nick Bergeron                  Total Keeper VOR: 1754.08
   10. Soph Nelson                    Total Keeper VOR: 1567.28
 
-Ã°Å¸â€œÂ MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):
+📊 MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):
    1. Derek Topper                   Total Draft Pick VOR: 1270.16
    2. Soph Nelson                    Total Draft Pick VOR: 1009.52
    3. Nick Bergeron                  Total Draft Pick VOR: 707.34
@@ -313,7 +289,7 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
   10. Peter Martino                  Total Draft Pick VOR: -598.08
 
 ================================================================================
-Ã°Å¸Ââ€  CHAMPIONSHIPS & PLAYOFF SUMMARY
+ CHAMPIONSHIPS & PLAYOFF SUMMARY
 ================================================================================
 
 CHAMPIONSHIP COUNT:
