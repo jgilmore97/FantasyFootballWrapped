@@ -209,11 +209,11 @@ __marimo__/
 # Project-specific artifacts
 amateur_hardcore_fantasy_wrapped.pdf
 
-# Generated Fantasy Wrapped outputs
-fantasy_wrapped.html
-fantasy_wrapped_data.json
-fantasy_wrapped_report.txt
-fantasy_wrapped_best_picks.csv
-fantasy_wrapped_best_pick_by_year.csv
-*.png
-!assets/*.png
+# # Generated Fantasy Wrapped outputs
+# fantasy_wrapped.html
+# fantasy_wrapped_data.json
+# fantasy_wrapped_report.txt
+# fantasy_wrapped_best_picks.csv
+# fantasy_wrapped_best_pick_by_year.csv
+# *.png
+# !assets/*.png
