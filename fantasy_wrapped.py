@@ -50,9 +50,6 @@ STARTABLE_THRESHOLDS = {
 INJURY_STATUSES = [
     'OUT',
     'IR',
-    'DOUBTFUL',
-    'SUSPENDED',
-    'QUESTIONABLE',
     'INJURY_RESERVE',
     'PUP',
     'PUP-R'
@@ -1112,6 +1109,28 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
     print("\nCharts saved to: fantasy_wrapped_charts.png")
 
 
+def save_structured_data(payload: Dict[str, Any]) -> None:
+    """Persist structured outputs for downstream analysis."""
+    try:
+        with open('fantasy_wrapped_data.json', 'w') as f:
+            json.dump(payload, f, indent=2)
+
+        if payload.get('best_picks'):
+            pd.DataFrame(payload['best_picks']).to_csv(
+                'fantasy_wrapped_best_picks.csv', index=False
+            )
+
+        if payload.get('best_pick_by_year'):
+            pd.DataFrame(payload['best_pick_by_year']).to_csv(
+                'fantasy_wrapped_best_pick_by_year.csv', index=False
+            )
+
+        print("\nStructured data saved to: fantasy_wrapped_data.json, "
+              "fantasy_wrapped_best_picks.csv, and fantasy_wrapped_best_pick_by_year.csv")
+    except Exception as e:
+        print(f"\nWarning: Unable to save structured data: {e}")
+
+
 # ========================================
 # REPORT GENERATION
 # ========================================
@@ -1129,6 +1148,8 @@ def generate_report(all_data: Dict):
         print("  3. Incorrect league ID")
         print("\nPlease check your configuration and try again.")
         return
+
+    generated_at = datetime.now()
 
     report = []
     report.append("=" * 80)
@@ -1388,6 +1409,8 @@ def generate_report(all_data: Dict):
 
     # Best Draft Pick by Year
     report.append("BEST DRAFT PICK BY YEAR (vs Round Average):")
+    best_pick_by_year = []
+    round_average_by_year: Dict[int, Dict[int, float]] = {}
     for year in YEARS:
         year_picks = [p for p in best_picks if p['year'] == year and not p['is_keeper']]
         if not year_picks:
@@ -1405,11 +1428,24 @@ def generate_report(all_data: Dict):
             if vors
         }
 
+        round_average_by_year[year] = round_vor_avgs
+
         def round_diff(pick):
             return pick['vor'] - round_vor_avgs.get(pick['round'], 0)
 
         best = max(year_picks, key=round_diff)
         diff = round_diff(best)
+
+        best_pick_by_year.append({
+            'year': year,
+            'player': best['player'],
+            'round': best['round'],
+            'vor': best['vor'],
+            'round_average_vor': round_vor_avgs.get(best['round'], 0),
+            'delta_vs_round': diff,
+            'seasons_contributing': best['seasons_contributing'],
+            'team': best['team']
+        })
 
         report.append(
             f"  {year}: {best['player']:25s} - Rd {best['round']:2d} - "
@@ -1463,7 +1499,7 @@ def generate_report(all_data: Dict):
     # FOOTER
     # ========================================
     report.append("=" * 80)
-    report.append(f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    report.append(f"Generated on {generated_at.strftime('%Y-%m-%d %H:%M:%S')}")
     report.append("=" * 80)
 
     # Write to file
@@ -1471,6 +1507,16 @@ def generate_report(all_data: Dict):
         f.write('\n'.join(report))
 
     print("\nReport saved to: fantasy_wrapped_report.txt")
+
+    save_structured_data({
+        'generated_at': generated_at.isoformat(),
+        'best_picks': best_picks,
+        'best_pick_by_year': best_pick_by_year,
+        'round_average_vor_by_year': {
+            year: {str(rnd): avg for rnd, avg in round_map.items()}
+            for year, round_map in round_average_by_year.items()
+        }
+    })
 
     # Also print to console
     print("\n" + '\n'.join(report))
