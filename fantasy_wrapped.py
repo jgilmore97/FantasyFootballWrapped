@@ -35,6 +35,12 @@ YEARS = [2021, 2022, 2023, 2024, 2025]
 ESPN_S2 = "AECZk7m5ZiOXfGwzOnbj7p3EoalPIV2RCeA%2BjgMiZfLTu731Pjk1h%2FkbHIVTCJ7QD0vd4XlZ%2FVezppPxysurKT6DFjtS2U6hF5XJUmHcjvHewmCbPaWv1YNI0FpLdBEADn3N1xKN9ert4%2BA9pljrcO3v9zrPV9h0h7u9%2ByCKJDEYxAoZjIWQTHD2qHdY4EOhi%2F0Y8iZYlrMp1BRmI8HDmYcZjtUwXTL%2Bx3H70FZtE1bfXPyqxs1n5zgFc0X7tRu3I2GfdTazuworr3VflODY9fVi8Hsf9ttxlat1slyF5zBGng%3D%3D"
 SWID = "{CFD648CA-1223-407F-8E12-A5F773A4C738}"
 
+# Weeks to exclude (for games that haven't happened yet)
+# Format: {year: [week1, week2, ...]}
+EXCLUDE_WEEKS = {
+    2025: [17]  # Week 17 2025 is the upcoming championship game
+}
+
 def _coerce_years(years_value) -> List[int]:
     """Normalize a variety of year inputs into a sorted list of integers."""
 
@@ -288,8 +294,13 @@ def extract_all_data():
         try:
             total_weeks = league.settings.reg_season_count
             all_data['season_weeks'][year] = total_weeks
-            
+
             for week in range(1, total_weeks + 1):
+                # Skip excluded weeks (e.g., games that haven't happened yet)
+                if year in EXCLUDE_WEEKS and week in EXCLUDE_WEEKS[year]:
+                    print(f"  Skipping {year} Week {week} (excluded - game hasn't happened yet)")
+                    continue
+
                 try:
                     box_scores = league.box_scores(week)
                     for matchup in box_scores:
