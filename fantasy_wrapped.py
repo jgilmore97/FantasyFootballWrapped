@@ -573,7 +573,12 @@ def calculate_value_over_replacement(all_data: Dict) -> Dict:
             if pos in replacement_levels:
                 replacement = replacement_levels[pos]
                 for player in players:
-                    vor = max(0, player['points'] - replacement)
+                    # Keep VOR for all players, even if they fall outside the
+                    # top-K replacement threshold for their position. Using the
+                    # top-K cutoff only to set the replacement line preserves
+                    # meaningful negative VOR in later seasons for players who
+                    # drop in production.
+                    vor = player['points'] - replacement
                     year_vor[player['name']] = {
                         'vor': vor,
                         'points': player['points'],
