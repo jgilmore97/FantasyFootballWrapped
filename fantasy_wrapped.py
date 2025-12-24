@@ -1387,14 +1387,35 @@ def generate_report(all_data: Dict):
     report.append("")
 
     # Best Draft Pick by Year
-    report.append("BEST DRAFT PICK BY YEAR:")
+    report.append("BEST DRAFT PICK BY YEAR (vs Round Average):")
     for year in YEARS:
         year_picks = [p for p in best_picks if p['year'] == year and not p['is_keeper']]
-        if year_picks:
-            best = year_picks[0]
-            report.append(f"  {year}: {best['player']:25s} - Rd {best['round']:2d} - "
-                         f"VOR since draft: {best['vor']:6.2f} - "
-                         f"Seasons: {best['seasons_contributing']:2d} - {best['team']}")
+        if not year_picks:
+            continue
+
+        # Compute the average VOR for each round in the given year so we can find
+        # the pick that most exceeds the expectation for its draft slot.
+        round_vor_totals = defaultdict(list)
+        for pick in year_picks:
+            round_vor_totals[pick['round']].append(pick['vor'])
+
+        round_vor_avgs = {
+            rnd: sum(vors) / len(vors)
+            for rnd, vors in round_vor_totals.items()
+            if vors
+        }
+
+        def round_diff(pick):
+            return pick['vor'] - round_vor_avgs.get(pick['round'], 0)
+
+        best = max(year_picks, key=round_diff)
+        diff = round_diff(best)
+
+        report.append(
+            f"  {year}: {best['player']:25s} - Rd {best['round']:2d} - "
+            f"VOR since draft: {best['vor']:6.2f} (Round Avg: {round_vor_avgs.get(best['round'], 0):6.2f}) - "
+            f"Δ vs Avg: {diff:6.2f} - Seasons: {best['seasons_contributing']:2d} - {best['team']}"
+        )
     report.append("")
 
     # Keeper Value
