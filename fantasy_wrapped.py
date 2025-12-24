@@ -492,8 +492,13 @@ def calculate_value_over_replacement(all_data: Dict) -> Dict:
 
 
 def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> List[Dict]:
-    """Find the best draft picks considering cost and value."""
-    best_picks = []
+    """Find the best draft picks relative to their round peers for each year.
+
+    For every season we calculate the average VOR for each round, then measure each
+    pick's delta above that round average (and percentage when possible). The
+    function returns the top pick(s) per year based on this round-relative delta.
+    """
+    best_picks_by_year = []
 
     for year in YEARS:
         if year not in all_data['draft_data'] or year not in vor_data:
@@ -502,42 +507,76 @@ def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> List[Dict]:
         draft = all_data['draft_data'][year]
         year_vor = vor_data[year]
 
+        round_vors = defaultdict(list)
+        picks_with_vor = []
+
+        # First pass: collect VORs by round to compute averages
         for pick in draft['picks']:
             player_name = pick['player_name']
+            if player_name not in year_vor:
+                continue
 
-            if player_name in year_vor:
-                vor = year_vor[player_name]['vor']
-                points = year_vor[player_name]['points']
+            round_num = pick['round'] if pick['round'] else 1
+            round_vors[round_num].append(year_vor[player_name]['vor'])
 
-                # Calculate draft value score
-                # Earlier picks have higher cost, so we want high VOR relative to draft position
-                # For keepers (rounds 1-6), they have no cost advantage in this league
-                round_num = pick['round'] if pick['round'] else 1
-                is_keeper = pick['is_keeper']
+            picks_with_vor.append({
+                'pick': pick,
+                'vor': year_vor[player_name]['vor'],
+                'points': year_vor[player_name]['points'],
+                'round': round_num,
+                'is_keeper': pick['is_keeper'],
+                'team': get_owner_name(pick['team']) if pick['team'] else 'Unknown',
+                'player': player_name,
+            })
 
-                # Value score: VOR divided by round number (later rounds = better value)
-                # For keepers, we still track but note they were kept
-                if round_num > 0:
-                    value_score = vor / round_num if not is_keeper else vor / 1
-                else:
-                    value_score = vor
+        if not picks_with_vor:
+            continue
 
-                best_picks.append({
-                    'year': year,
-                    'player': player_name,
-                    'round': round_num,
-                    'overall': pick['overall'],
-                    'vor': vor,
-                    'points': points,
-                    'is_keeper': is_keeper,
-                    'value_score': value_score,
-                    'team': get_owner_name(pick['team']) if pick['team'] else 'Unknown'
-                })
+        round_avg_vor = {
+            rnd: sum(vors) / len(vors)
+            for rnd, vors in round_vors.items()
+            if vors
+        }
 
-    # Sort by value score
-    best_picks.sort(key=lambda x: x['value_score'], reverse=True)
+        # Second pass: compute deltas and identify the top pick(s) for the year
+        year_picks_with_delta = []
+        for pick_data in picks_with_vor:
+            avg_vor = round_avg_vor.get(pick_data['round'])
+            if avg_vor is None:
+                continue
 
-    return best_picks
+            delta = pick_data['vor'] - avg_vor
+            pct_delta = (delta / avg_vor) if avg_vor else None
+
+            year_picks_with_delta.append({
+                'year': year,
+                'player': pick_data['player'],
+                'round': pick_data['round'],
+                'overall': pick_data['pick'].get('overall'),
+                'vor': pick_data['vor'],
+                'points': pick_data['points'],
+                'is_keeper': pick_data['is_keeper'],
+                'team': pick_data['team'],
+                'round_avg_vor': avg_vor,
+                'round_vor_delta': delta,
+                'round_vor_pct_delta': pct_delta,
+            })
+
+        if not year_picks_with_delta:
+            continue
+
+        best_delta = max(p['round_vor_delta'] for p in year_picks_with_delta)
+        best_for_year = [
+            p for p in year_picks_with_delta if p['round_vor_delta'] == best_delta
+        ]
+
+        # Keep the best pick(s) for the season, sorted by round for readability
+        best_picks_by_year.extend(sorted(best_for_year, key=lambda x: x['round']))
+
+    # Sort chronologically for reporting
+    best_picks_by_year.sort(key=lambda x: x['year'])
+
+    return best_picks_by_year
 
 
 def calculate_keeper_value(all_data: Dict, vor_data: Dict) -> Dict[str, float]:
@@ -1265,23 +1304,36 @@ def generate_report(all_data: Dict):
     # Best Draft Picks
     best_picks = find_best_draft_picks(all_data, vor_data)
 
-    report.append("🎯 BEST DRAFT PICKS (By Value Score):")
-    non_keeper_picks = [p for p in best_picks if not p['is_keeper']][:10]
-    for i, pick in enumerate(non_keeper_picks, 1):
-        report.append(f"  {i:2d}. {pick['player']:25s} ({pick['year']}) - "
-                     f"Rd {pick['round']:2d} - VOR: {pick['vor']:6.2f} - "
-                     f"Value Score: {pick['value_score']:6.2f} - {pick['team']}")
+    report.append("🎯 BEST DRAFT PICKS BY YEAR (Round-Relative VOR Delta):")
+    non_keeper_picks = [p for p in best_picks if not p['is_keeper']]
+    for pick in non_keeper_picks:
+        pct_delta = (
+            f"{pick['round_vor_pct_delta'] * 100:.1f}%"
+            if pick['round_vor_pct_delta'] is not None
+            else "N/A"
+        )
+        report.append(
+            f"  {pick['year']}: {pick['player']:25s} - Rd {pick['round']:2d} - "
+            f"VOR: {pick['vor']:6.2f} - Δ vs Rd Avg: {pick['round_vor_delta']:6.2f} "
+            f"({pct_delta}) - {pick['team']}"
+        )
     report.append("")
 
-    # Best Draft Pick by Year
-    report.append("BEST DRAFT PICK BY YEAR:")
-    for year in YEARS:
-        year_picks = [p for p in best_picks if p['year'] == year and not p['is_keeper']]
-        if year_picks:
-            best = year_picks[0]
-            report.append(f"  {year}: {best['player']:25s} - Rd {best['round']:2d} - "
-                         f"VOR: {best['vor']:6.2f} - {best['team']}")
-    report.append("")
+    keeper_best_picks = [p for p in best_picks if p['is_keeper']]
+    if keeper_best_picks:
+        report.append("🔒 TOP KEEPER PICKS BY YEAR (Round-Relative VOR Delta):")
+        for pick in keeper_best_picks:
+            pct_delta = (
+                f"{pick['round_vor_pct_delta'] * 100:.1f}%"
+                if pick['round_vor_pct_delta'] is not None
+                else "N/A"
+            )
+            report.append(
+                f"  {pick['year']}: {pick['player']:25s} - Rd {pick['round']:2d} - "
+                f"VOR: {pick['vor']:6.2f} - Δ vs Rd Avg: {pick['round_vor_delta']:6.2f} "
+                f"({pct_delta}) - {pick['team']}"
+            )
+        report.append("")
 
     # Keeper Value
     keeper_values = calculate_keeper_value(all_data, vor_data)
