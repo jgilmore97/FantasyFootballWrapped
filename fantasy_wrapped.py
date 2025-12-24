@@ -269,9 +269,7 @@ def extract_all_data():
 
             stats = all_data['team_stats'][identifier]
             stats['seasons_played'] += 1
-            stats['wins'] += team.wins
-            stats['losses'] += team.losses
-            stats['ties'] += team.ties
+            # Note: wins/losses/ties will be calculated from matchup data for accuracy
             stats['total_points_for'] += team.points_for
             stats['total_points_against'] += team.points_against
 
@@ -386,6 +384,28 @@ def extract_all_data():
         except Exception as e:
             print(f"  Warning: Could not process player data for {year}: {e}")
 
+    # Calculate wins/losses/ties from matchup data for accuracy
+    # (ESPN's team.wins/losses/ties can be inconsistent with actual matchup results)
+    print("\nCalculating wins/losses/ties from matchup data...")
+    for matchup in all_data['matchups']:
+        home = matchup['home_team']
+        away = matchup['away_team']
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+
+        home_stats = all_data['team_stats'][home]
+        away_stats = all_data['team_stats'][away]
+
+        if home_score > away_score:
+            home_stats['wins'] = home_stats.get('wins', 0) + 1
+            away_stats['losses'] = away_stats.get('losses', 0) + 1
+        elif away_score > home_score:
+            away_stats['wins'] = away_stats.get('wins', 0) + 1
+            home_stats['losses'] = home_stats.get('losses', 0) + 1
+        else:
+            # Tie
+            home_stats['ties'] = home_stats.get('ties', 0) + 1
+            away_stats['ties'] = away_stats.get('ties', 0) + 1
 
     return all_data
 
