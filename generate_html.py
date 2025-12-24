@@ -354,11 +354,8 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
     html += f"""
     <section class="section hero">
         <div class="container">
-            <h1>🎄 FANTASY FOOTBALL WRAPPED 🎄</h1>
+            <h1>🎄 AMATEUR HARD CORE FANTASY WRAPPED 🎄</h1>
             <h2>{years[0]}-{years[-1]} Season</h2>
-            <p style="font-size: 1.2rem; margin-top: 30px; color: {colors['off_white']};">
-                Your league's greatest moments, biggest winners, and epic fails
-            </p>
         </div>
         <div class="scroll-indicator">↓</div>
     </section>
@@ -1257,11 +1254,9 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
 """
 
     # Footer
-    generated_at = data.get('generated_at', datetime.now().isoformat())
     html += f"""
     <div class="footer">
-        <p>Generated on {datetime.fromisoformat(generated_at).strftime('%B %d, %Y at %I:%M %p')}</p>
-        <p style="margin-top: 10px;">🎄 Happy Holidays & Better Luck Next Season! 🎄</p>
+        <p>🎄 Happy Holidays & Better Luck Next Season! 🎄</p>
     </div>
 
     <script>
