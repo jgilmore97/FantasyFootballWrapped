@@ -115,6 +115,7 @@ The script will:
 - **fantasy_wrapped_report.txt**: ASCII-formatted comprehensive report with all awards, rankings, and analysis
 - **fantasy_wrapped_charts.png**: Multi-panel visualization with 6 charts including MVP showcase and Hall of Fame
 - **mvp_headshot.png**: ESPN headshot of the Most Valuable Player
+- **amateur_hardcore_fantasy_wrapped.html**: Single-page, mobile-friendly "Wrapped" recap you can open in a browser or drop into a group chat. Built via `python generate_wrapped_html.py` using the already-generated report/data artifacts.
 
 The visualization now includes a "Hall of Fame" section displaying the top 10 most valuable player seasons with their ESPN headshots in a grid layout, creating a truly "Spotify Wrapped" style experience!
 
