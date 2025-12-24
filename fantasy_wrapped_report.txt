@@ -276,21 +276,56 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
    9. Nick Bergeron                  Total Keeper VOR: 1754.08
   10. Soph Nelson                    Total Keeper VOR: 1567.28
 
-📊 MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):
-   1. Derek Topper                   Total Draft Pick VOR: 1270.16
-   2. Soph Nelson                    Total Draft Pick VOR: 1009.52
+ 📊 MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):
+    1. Derek Topper                   Total Draft Pick VOR: 1270.16
+    2. Soph Nelson                    Total Draft Pick VOR: 1009.52
    3. Nick Bergeron                  Total Draft Pick VOR: 707.34
    4. Jackson Slaughter              Total Draft Pick VOR: 634.68
    5. Maggie Mansfield               Total Draft Pick VOR: 577.80
    6. Jack Gilmore                   Total Draft Pick VOR: 533.92
    7. Nadia Moumine                  Total Draft Pick VOR: 488.52
    8. Kilian Nelson                  Total Draft Pick VOR: 132.38
-   9. Veronica Agne                  Total Draft Pick VOR: 113.50
-  10. Peter Martino                  Total Draft Pick VOR: -598.08
+    9. Veronica Agne                  Total Draft Pick VOR: 113.50
+   10. Peter Martino                  Total Draft Pick VOR: -598.08
 
 ================================================================================
-🏈 PLAYOFF SUMMARY
+📮 TRANSACTION SPOTLIGHT
 ================================================================================
+
+📬 WAIVER WIRE WARRIOR (Most Claims):
+   1. Derek Topper                   37 claims
+   2. Jackson Slaughter              32 claims
+   3. Soph Nelson                    30 claims
+   4. Veronica Agne                  28 claims
+   5. Peter Martino                  27 claims
+
+🔝 TOP 5 WAIVER/FREE AGENT ADDS (Tenure VOR):
+   1. Amon-Ra St. Brown         (2021) - VOR: 792.12 - Soph Nelson
+   2. James Cook III            (2022) - VOR: 422.50 - Maggie Mansfield
+   3. Jared Goff                (2023) - VOR: 396.44 - Veronica Agne
+   4. Kyren Williams            (2024) - VOR: 355.88 - Derek Topper
+   5. Raheem Mostert            (2022) - VOR: 310.42 - Nick Bergeron
+
+🤪 SICKO (Most Trades):
+   1. Jack Gilmore                   11 trades
+   2. Derek Topper                    9 trades
+   3. Nick Bergeron                   8 trades
+   4. Veronica Agne                   7 trades
+   5. Soph Nelson                     7 trades
+
+🤝 BUSINESS PARTNERS (Most Trades Together):
+   1. Jack Gilmore          & Nick Bergeron        - 4 trades
+   2. Derek Topper          & Veronica Agne        - 3 trades
+   3. Soph Nelson           & Maggie Mansfield     - 3 trades
+   4. Peter Martino         & Kilian Nelson        - 2 trades
+   5. Jackson Slaughter     & Nadia Moumine        - 2 trades
+
+🦈 SHARK (Most VOR Acquired via Trades): Jack Gilmore - 612.44 VOR
+🎣 FISH (Most VOR Sent Away via Trades): Soph Nelson - 544.18 VOR
+
+ ================================================================================
+ 🏈 PLAYOFF SUMMARY
+ ================================================================================
 
 PLAYOFF APPEARANCES:
    1. Kilian Nelson                  4 appearances
