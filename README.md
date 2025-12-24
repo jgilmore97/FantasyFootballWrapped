@@ -65,13 +65,26 @@ Since your league is private, you need to provide authentication cookies:
 
 ### 3. Configure the Script
 
-The credentials are already configured in `fantasy_wrapped.py` for your league:
-- **League ID**: 778135041
-- **Years**: 2021-2025
-- **ESPN_S2**: Already set
-- **SWID**: Already set
+Supply your credentials and league info via environment variables or CLI flags (recommended so you don't have to edit the code):
 
-If you need to update credentials, edit the configuration section at the top of `fantasy_wrapped.py`.
+```bash
+# Environment variables
+export LEAGUE_ID=123456
+export YEARS=2021,2022,2023,2024,2025
+export ESPN_S2="<your espn_s2 cookie>"
+export SWID="{XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}"
+
+# Or pass them on the command line
+python fantasy_wrapped.py \
+  --league-id 123456 \
+  --years 2021,2022,2023,2024,2025 \
+  --espn-s2 "$ESPN_S2" \
+  --swid "$SWID"
+```
+
+Tips:
+- Confirm your league ID by opening `https://fantasy.espn.com/football/league?leagueId=<your-id>` in a browser.
+- Refresh the `espn_s2` and `SWID` cookies if you see authentication or "league does not exist" errors.
 
 ### 4. Run the Analysis
 
