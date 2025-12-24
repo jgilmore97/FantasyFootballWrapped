@@ -51,6 +51,7 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
     colors = {
         'dark_red': '#8B0000',
         'red': '#DC143C',
+        'orange': '#FF8C00',
         'green': '#228B22',
         'dark_green': '#0B4F0B',
         'gold': '#FFD700',
@@ -267,7 +268,7 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
             height: 35px;
             line-height: 35px;
             border-radius: 50%;
-            background: {colors['gold']};
+            background: {colors['white']};
             color: {colors['dark_bg']};
             font-weight: 900;
             text-align: center;
@@ -977,7 +978,7 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
             if nemesis:
                 html += f"""
                 <div style="margin-bottom: 15px;">
-                    <div style="font-size: 1.2rem; font-weight: 700; color: {colors['red']};">👿 Nemesis: {nemesis.get('opponent', 'N/A')}</div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: {colors['orange']};">👿 Nemesis: {nemesis.get('opponent', 'N/A')}</div>
                     <div class="award-stats">
                         They scored {nemesis.get('avg_points_against', 0):.1f} pts/game vs you
                         ({nemesis.get('total_points_against', 0):.1f} total, {nemesis.get('games', 0)} games)<br>
