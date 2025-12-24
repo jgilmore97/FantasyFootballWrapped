@@ -54,6 +54,7 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
         'orange': '#FF8C00',
         'green': '#228B22',
         'dark_green': '#0B4F0B',
+        'blue': '#4169E1',
         'gold': '#FFD700',
         'dark_gold': '#B8860B',
         'white': '#FFFFFF',
@@ -986,7 +987,7 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
             if victim:
                 html += f"""
                 <div>
-                    <div style="font-size: 1.2rem; font-weight: 700; color: {colors['green']};">🏹 Victim: {victim.get('opponent', 'N/A')}</div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: {colors['blue']};">🏹 Victim: {victim.get('opponent', 'N/A')}</div>
                     <div class="award-stats">
                         You scored {victim.get('avg_points_for', 0):.1f} pts/game vs them
                         ({victim.get('total_points_for', 0):.1f} total, {victim.get('games', 0)} games)<br>
