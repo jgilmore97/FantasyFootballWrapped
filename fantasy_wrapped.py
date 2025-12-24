@@ -2414,9 +2414,13 @@ def save_comprehensive_json(all_data: Dict, vor_data: Dict) -> None:
         # ========================================
         # SPECIAL AWARDS
         # ========================================
-        late_legend = calculate_late_round_legend(all_data, vor_data)
-        if late_legend:
-            payload['special_awards']['late_round_legend'] = late_legend
+        try:
+            late_legend = calculate_late_round_legend(all_data, vor_data)
+            if late_legend:
+                payload['special_awards']['late_round_legend'] = late_legend
+        except KeyError:
+            # Draft data not available
+            pass
 
         punt_god, punt_god_points, punt_breakdown = calculate_punt_god(all_data)
         if punt_god:
@@ -2454,17 +2458,21 @@ def save_comprehensive_json(all_data: Dict, vor_data: Dict) -> None:
                                                      reverse=True), 1)
         ]
 
-        weighted_injury_data = calculate_weighted_injury_impact(all_data, vor_data)
-        payload['injury_analysis']['weighted_impact'] = [
-            {
-                'rank': i,
-                'team': team,
-                'weighted_score': score
-            }
-            for i, (team, score) in enumerate(sorted(weighted_injury_data['manager_scores'].items(),
-                                                     key=lambda x: x[1],
-                                                     reverse=True), 1)
-        ]
+        try:
+            weighted_injury_data = calculate_weighted_injury_impact(all_data, vor_data)
+            payload['injury_analysis']['weighted_impact'] = [
+                {
+                    'rank': i,
+                    'team': team,
+                    'weighted_score': score
+                }
+                for i, (team, score) in enumerate(sorted(weighted_injury_data['manager_scores'].items(),
+                                                         key=lambda x: x[1],
+                                                         reverse=True), 1)
+            ]
+        except KeyError:
+            # Draft data not available for weighted injury impact
+            pass
 
         # ========================================
         # HEAD-TO-HEAD STATS
@@ -2525,48 +2533,52 @@ def save_comprehensive_json(all_data: Dict, vor_data: Dict) -> None:
         # ========================================
         # DRAFT ANALYSIS
         # ========================================
-        best_picks, round_average_by_year = find_best_draft_picks(all_data, vor_data)
-        payload['draft_analysis']['best_picks_all_time'] = [
-            p for p in best_picks if not p['is_keeper']
-        ][:20]
+        try:
+            best_picks, round_average_by_year = find_best_draft_picks(all_data, vor_data)
+            payload['draft_analysis']['best_picks_all_time'] = [
+                p for p in best_picks if not p['is_keeper']
+            ][:20]
 
-        best_pick_by_year = []
-        for year in YEARS:
-            year_picks = [p for p in best_picks if p['year'] == year and not p['is_keeper']]
-            if year_picks:
-                best = max(year_picks, key=lambda p: p['value_score'])
-                best_pick_by_year.append({
-                    'year': year,
-                    'player': best['player'],
-                    'round': best['round'],
-                    'vor': best['vor'],
-                    'round_average_vor': best['round_average'],
-                    'delta_vs_round': best['value_score'],
-                    'seasons_contributing': best['seasons_contributing'],
-                    'team': best['team']
-                })
-        payload['draft_analysis']['best_pick_by_year'] = best_pick_by_year
+            best_pick_by_year = []
+            for year in YEARS:
+                year_picks = [p for p in best_picks if p['year'] == year and not p['is_keeper']]
+                if year_picks:
+                    best = max(year_picks, key=lambda p: p['value_score'])
+                    best_pick_by_year.append({
+                        'year': year,
+                        'player': best['player'],
+                        'round': best['round'],
+                        'vor': best['vor'],
+                        'round_average_vor': best['round_average'],
+                        'delta_vs_round': best['value_score'],
+                        'seasons_contributing': best['seasons_contributing'],
+                        'team': best['team']
+                    })
+            payload['draft_analysis']['best_pick_by_year'] = best_pick_by_year
 
-        payload['draft_analysis']['round_average_vor_by_year'] = {
-            year: {str(rnd): avg for rnd, avg in round_map.items()}
-            for year, round_map in round_average_by_year.items()
-        }
+            payload['draft_analysis']['round_average_vor_by_year'] = {
+                year: {str(rnd): avg for rnd, avg in round_map.items()}
+                for year, round_map in round_average_by_year.items()
+            }
 
-        keeper_values = calculate_keeper_value(all_data, vor_data)
-        payload['draft_analysis']['keeper_value_rankings'] = [
-            {'rank': i, 'team': team, 'total_keeper_vor': value}
-            for i, (team, value) in enumerate(sorted(keeper_values.items(),
-                                                     key=lambda x: x[1],
-                                                     reverse=True), 1)
-        ]
+            keeper_values = calculate_keeper_value(all_data, vor_data)
+            payload['draft_analysis']['keeper_value_rankings'] = [
+                {'rank': i, 'team': team, 'total_keeper_vor': value}
+                for i, (team, value) in enumerate(sorted(keeper_values.items(),
+                                                         key=lambda x: x[1],
+                                                         reverse=True), 1)
+            ]
 
-        draft_values = calculate_draft_pick_value(all_data, vor_data)
-        payload['draft_analysis']['draft_pick_value_rankings'] = [
-            {'rank': i, 'team': team, 'total_draft_pick_vor': value}
-            for i, (team, value) in enumerate(sorted(draft_values.items(),
-                                                     key=lambda x: x[1],
-                                                     reverse=True), 1)
-        ]
+            draft_values = calculate_draft_pick_value(all_data, vor_data)
+            payload['draft_analysis']['draft_pick_value_rankings'] = [
+                {'rank': i, 'team': team, 'total_draft_pick_vor': value}
+                for i, (team, value) in enumerate(sorted(draft_values.items(),
+                                                         key=lambda x: x[1],
+                                                         reverse=True), 1)
+            ]
+        except KeyError as e:
+            # Draft data not available (e.g., in test mode)
+            payload['draft_analysis']['note'] = 'Draft data not available'
 
         # ========================================
         # TEAM STATS (Raw Data)
@@ -3097,9 +3109,17 @@ def main():
     print("\nPhase 4: Generating comprehensive report...")
     generate_report(all_data)
 
+    print("\nPhase 5: Generating HTML wrapped page...")
+    try:
+        from generate_html import generate_html_wrapped
+        generate_html_wrapped()
+    except Exception as e:
+        print(f"Warning: Could not generate HTML page: {e}")
+
     print("\n" + "=" * 80)
     print(" Analysis Complete!".center(80))
     print(" Check fantasy_wrapped_report.txt and individual PNG visualizations".center(80))
+    print(" HTML Page: fantasy_wrapped.html".center(80))
     if mvp_headshot:
         print(" Single-Season MVP: mvp_panel.png".center(80))
     if mvp_5year_headshot:

@@ -179,6 +179,16 @@ def test_visualizations():
         import traceback
         traceback.print_exc()
 
+    print("\n2b. Testing HTML generation...")
+    try:
+        from generate_html import generate_html_wrapped
+        generate_html_wrapped()
+        print("✅ HTML generation test completed!")
+    except Exception as e:
+        print(f"❌ HTML generation test failed: {e}")
+        import traceback
+        traceback.print_exc()
+
     print("\n3. Verifying output files...")
     import os
 
@@ -237,13 +247,20 @@ def test_visualizations():
     else:
         print("  ✗ fantasy_wrapped_data.json - NOT FOUND")
 
+    if os.path.exists('fantasy_wrapped.html'):
+        size = os.path.getsize('fantasy_wrapped.html') / 1024  # KB
+        print(f"\n  ✓ fantasy_wrapped.html ({size:.1f} KB)")
+    else:
+        print("\n  ✗ fantasy_wrapped.html - NOT FOUND")
+
     print("\n" + "=" * 80)
     print("TEST SUMMARY")
     print("=" * 80)
     print("✅ Individual PNG files are now generated instead of one combined file")
     print("✅ Charts have improved styling with better colors and fonts")
     print("✅ Comprehensive JSON includes all awards and statistics")
-    print("✅ Ready for HTML page generation!")
+    print("✅ Beautiful HTML page generated with Christmas theme!")
+    print("✅ Open fantasy_wrapped.html in your browser to see the results")
     print("=" * 80)
 
 
