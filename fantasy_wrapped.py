@@ -200,10 +200,18 @@ def get_owner_name(team):
 
     # Handle both 'owner' (old API) and 'owners' (new API)
     if hasattr(team, 'owner'):
-        return _normalize_owner(team.owner)
+        owner_name = _normalize_owner(team.owner)
     elif hasattr(team, 'owners'):
-        return _normalize_owner(team.owners)
-    return 'Unknown'
+        owner_name = _normalize_owner(team.owners)
+    else:
+        owner_name = 'Unknown'
+
+    # Custom name mappings (e.g., for managers who changed mid-season)
+    name_mappings = {
+        'Nadia Moumine': 'Nadia/Zoe'
+    }
+
+    return name_mappings.get(owner_name, owner_name)
 
 
 def extract_all_data():
