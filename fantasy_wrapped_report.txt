@@ -53,33 +53,61 @@ ALL-TIME WIN PERCENTAGE RANKINGS:
    9. Nadia Moumine                  30-49- 0 ( 38.0%)
   10. Soph Nelson                    26-53- 0 ( 32.9%)
 
-💥 HIGHEST SINGLE WEEK: Derek Topper
+💥 OFFENSIVE EXPLOSION (Highest Single Week): Derek Topper
    Score: 250.00
+   When: 2024 Week 11
+   vs Peter Martino (134.58)
 
-🦵 PUNT GOD (Most D/ST, K, P Points): Peter Martino
-   Total Special Teams Points: 3670.10
-   Defense/ST: 1887.00 | Kicker: 1229.00 | Punter: 554.10
+💀 OFFENSIVE DUD (Lowest Single Week): Soph Nelson
+   Score: 76.92
+   When: 2023 Week 9
+   vs Nadia Moumine (160.90)
+
+💔 HEARTBREAKER (Most Losses by <5 Points): Nick Bergeron
+   Close Losses: 8
+   Recent heartbreaks:
+     2024 Wk1: Lost 144.30-145.54 vs Derek Topper (margin: 1.24)
+     2024 Wk7: Lost 115.78-117.30 vs Nadia Moumine (margin: 1.52)
+     2024 Wk10: Lost 159.18-161.18 vs Derek Topper (margin: 2.00)
+
+🔥 LONGEST WIN STREAK: Peter Martino
+   8 wins in a row
+   2023 Week 9 - 2023 Week 16
+
+😭 LONGEST LOSING STREAK: Soph Nelson
+   11 losses in a row
+   2022 Week 5 - 2022 Week 16
+
+🎰 BAD BEAT (2nd Highest Score but Lost): Derek Topper
+   Score: 205.98
+   When: 2022 Week 12
+   Lost to Jack Gilmore (219.10)
+   Week's top score: Jack Gilmore (219.10)
+
+🦵 PUNT GOD (Most D/ST, K, P Points): Jack Gilmore
+   Total Special Teams Points: 3420.54
+   Defense/ST: 1652.00 | Kicker: 1254.00 | Punter: 514.54
 
 ================================================================================
 🩺 INJURY ANALYSIS
 ================================================================================
 
 🤒 MOST INJURED TEAM: Nadia Moumine
-   Total Injury-Weeks: 79
+   Total Injury-Weeks: 77
    Worst Single Week: 6 injuries
-   Frequent Flyer: Joe Mixon (16 injury-weeks)
+   Frequent Flyer: Patrick Mahomes (15 injury-weeks)
 
 INJURY-WEEK RANKINGS:
-   1. Nadia Moumine                    79 injury-weeks (max 6 in one week)
-   2. Kilian Nelson                    61 injury-weeks (max 4 in one week)
-   3. Jackson Slaughter                51 injury-weeks (max 3 in one week)
-   4. Soph Nelson                      46 injury-weeks (max 3 in one week)
-   5. Peter Martino                    40 injury-weeks (max 3 in one week)
-   6. Veronica Agne                    38 injury-weeks (max 3 in one week)
-   7. Derek Topper                     33 injury-weeks (max 1 in one week)
-   8. Maggie Mansfield                 19 injury-weeks (max 2 in one week)
-   9. Nick Bergeron                    18 injury-weeks (max 2 in one week)
-  10. Jack Gilmore                     18 injury-weeks (max 3 in one week)
+   1. Nadia Moumine                    77 injury-weeks (max 6 in one week)
+   2. Kilian Nelson                    58 injury-weeks (max 4 in one week)
+   3. Jackson Slaughter                49 injury-weeks (max 3 in one week)
+   4. Soph Nelson                      43 injury-weeks (max 3 in one week)
+   5. Peter Martino                    41 injury-weeks (max 4 in one week)
+   6. Veronica Agne                    36 injury-weeks (max 3 in one week)
+   7. Derek Topper                     33 injury-weeks (max 2 in one week)
+   8. Maggie Mansfield                 20 injury-weeks (max 3 in one week)
+   9. Jack Gilmore                     18 injury-weeks (max 3 in one week)
+  10. Nick Bergeron                    17 injury-weeks (max 2 in one week)
 
 ================================================================================
 💸 INJURY IMPACT (Draft Capital Weighted)
@@ -90,16 +118,16 @@ Keepers ranked by prior year VOR and assigned rounds 1-6
 Undrafted/waiver players excluded
 
 WEIGHTED INJURY SCORE RANKINGS:
-   1. Nadia Moumine                  Weighted Injury Score: 276
-   2. Derek Topper                   Weighted Injury Score: 269
-   3. Kilian Nelson                  Weighted Injury Score: 215
-   4. Jack Gilmore                   Weighted Injury Score: 210
-   5. Veronica Agne                  Weighted Injury Score: 147
-   6. Peter Martino                  Weighted Injury Score: 144
-   7. Soph Nelson                    Weighted Injury Score: 142
-   8. Jackson Slaughter              Weighted Injury Score: 126
-   9. Maggie Mansfield               Weighted Injury Score: 48
-  10. Nick Bergeron                  Weighted Injury Score: 34
+   1. Derek Topper                   Weighted Injury Score: 266
+   2. Kilian Nelson                  Weighted Injury Score: 193
+   3. Nadia Moumine                  Weighted Injury Score: 177
+   4. Peter Martino                  Weighted Injury Score: 137
+   5. Soph Nelson                    Weighted Injury Score: 132
+   6. Jack Gilmore                   Weighted Injury Score: 114
+   7. Jackson Slaughter              Weighted Injury Score: 113
+   8. Veronica Agne                  Weighted Injury Score: 107
+   9. Maggie Mansfield               Weighted Injury Score: 45
+  10. Nick Bergeron                  Weighted Injury Score: 9
 
 ================================================================================
 ⚔️  NEMESIS & VICTIMS
@@ -165,17 +193,17 @@ Peter Martino:
   👿 Nemesis: Derek Topper
      Scored 183.3 pts/game against you (1650.0 total, 9 games)
      Your record vs them: 4-5-0
-  🏹 Victim: Maggie Mansfield
-     You scored 166.7 pts/game against them (1166.9 total, 7 games)
-     Your record vs them: 3-4-0
+  🏹 Victim: Nadia Moumine
+     You scored 173.3 pts/game against them (1386.8 total, 8 games)
+     Your record vs them: 7-1-0
 
 Soph Nelson:
   👿 Nemesis: Nick Bergeron
      Scored 177.1 pts/game against you (1593.8 total, 9 games)
      Your record vs them: 1-8-0
-  🏹 Victim: Veronica Agne
-     You scored 155.9 pts/game against them (1559.2 total, 10 games)
-     Your record vs them: 3-7-0
+  🏹 Victim: Jack Gilmore
+     You scored 162.6 pts/game against them (1625.6 total, 10 games)
+     Your record vs them: 4-6-0
 
 Veronica Agne:
   👿 Nemesis: Maggie Mansfield
@@ -184,6 +212,38 @@ Veronica Agne:
   🏹 Victim: Jack Gilmore
      You scored 173.2 pts/game against them (1212.1 total, 7 games)
      Your record vs them: 5-2-0
+
+
+ALL-TIME HEAD-TO-HEAD RECORDS MATRIX
+Records shown as W-L-T (Wins-Losses-Ties)
+
+LEGEND:
+   1. Derek Topper
+   2. Jack Gilmore
+   3. Jackson Slaughter
+   4. Kilian Nelson
+   5. Maggie Mansfield
+   6. Nadia Moumine
+   7. Nick Bergeron
+   8. Peter Martino
+   9. Soph Nelson
+  10. Veronica Agne
+
+    |   1  |   2  |   3  |   4  |   5  |   6  |   7  |   8  |   9  |  10  |
+---------------------------------------------------------------------------
+  1 |  --  |  4-7 |  4-3 |  0-9 |  6-4 |  6-4 | 7-1-1 |  5-4 |  5-3 |  5-4 |
+  2 |  7-4 |  --  |  3-3 |  8-3 |  9-1 |  6-4 |  4-2 |  7-2 |  6-4 |  2-5 |
+  3 |  3-4 |  3-3 |  --  |  5-5 |  6-1 |  6-5 |  2-7 |  5-3 |  8-3 |  4-7 |
+  4 |  9-0 |  3-8 |  5-5 |  --  |  6-4 |  7-3 |  5-4 |  3-4 |  6-0 |  5-2 |
+  5 |  4-6 |  1-9 |  1-6 |  4-6 |  --  |  6-4 |  4-6 |  4-3 |  4-4 |  5-2 |
+  6 |  4-6 |  4-6 |  5-6 |  3-7 |  4-6 |  --  |  1-4 |  1-7 |  3-4 |  5-3 |
+  7 | 1-7-1 |  2-4 |  7-2 |  4-5 |  6-4 |  4-1 |  --  |  5-8 |  8-1 |  4-7 |
+  8 |  4-5 |  2-7 |  3-5 |  4-3 |  3-4 |  7-1 |  8-5 |  --  |  6-4 |  4-6 |
+  9 |  3-5 |  4-6 |  3-8 |  0-6 |  4-4 |  4-3 |  1-8 |  4-6 |  --  |  3-7 |
+ 10 |  4-5 |  5-2 |  7-4 |  2-5 |  2-5 |  3-5 |  7-4 |  6-4 |  7-3 |  --  |
+
+How to read: Row manager's record vs Column manager
+Example: Row 1, Column 2 shows manager #1's record against manager #2
 
 ================================================================================
 🔍 PLAYER DEEP DIVE
@@ -245,23 +305,23 @@ TOP 10 MOST VALUABLE PLAYER SEASONS:
   10. CeeDee Lamb               (2023) - WR   - VOR: 261.40 - Peter Martino
 
 🎯 BEST DRAFT PICKS (By Δ vs Round Average):
-   1. Ja'Marr Chase             (2021) - Rd  9 - VOR: 803.35 (Round Avg: 110.11) - Î”: +693.25 - Jackson Slaughter
-   2. Josh Allen                (2021) - Rd  1 - VOR: 1173.91 (Round Avg: 548.50) - Î”: +625.41 - Jack Gilmore
-   3. CeeDee Lamb               (2021) - Rd  4 - VOR: 737.47 (Round Avg: 141.59) - Î”: +595.88 - Peter Martino
-   4. Jalen Hurts               (2021) - Rd  6 - VOR: 811.07 (Round Avg: 228.31) - Î”: +582.76 - Derek Topper
-   5. Amon-Ra St. Brown         (2022) - Rd  8 - VOR: 650.80 (Round Avg: 124.71) - Î”: +526.09 - Veronica Agne
-   6. Justin Jefferson          (2021) - Rd  3 - VOR: 726.18 (Round Avg: 283.86) - Î”: +442.32 - Jack Gilmore
-   7. Josh Jacobs               (2022) - Rd  7 - VOR: 548.44 (Round Avg: 131.93) - Î”: +416.51 - Derek Topper
-   8. Jahmyr Gibbs              (2023) - Rd  7 - VOR: 563.76 (Round Avg: 167.50) - Î”: +396.26 - Soph Nelson
-   9. Bijan Robinson            (2023) - Rd  7 - VOR: 545.41 (Round Avg: 167.50) - Î”: +377.91 - Jack Gilmore
-  10. Joe Burrow                (2021) - Rd  6 - VOR: 562.61 (Round Avg: 228.31) - Î”: +334.30 - Jackson Slaughter
+   1. Ja'Marr Chase             (2021) - Rd  9 - VOR: 793.62 (Round Avg: 109.03) - Î”: +684.59 - Jackson Slaughter
+   2. Josh Allen                (2021) - Rd  1 - VOR: 1161.78 (Round Avg: 544.29) - Î”: +617.50 - Jack Gilmore
+   3. CeeDee Lamb               (2021) - Rd  4 - VOR: 732.15 (Round Avg: 141.06) - Î”: +591.10 - Peter Martino
+   4. Jalen Hurts               (2021) - Rd  6 - VOR: 811.07 (Round Avg: 228.62) - Î”: +582.45 - Derek Topper
+   5. Amon-Ra St. Brown         (2022) - Rd  8 - VOR: 639.93 (Round Avg: 123.14) - Î”: +516.80 - Veronica Agne
+   6. Justin Jefferson          (2021) - Rd  3 - VOR: 721.68 (Round Avg: 282.05) - Î”: +439.63 - Jack Gilmore
+   7. Josh Jacobs               (2022) - Rd  7 - VOR: 541.18 (Round Avg: 131.12) - Î”: +410.06 - Derek Topper
+   8. Jahmyr Gibbs              (2023) - Rd  7 - VOR: 550.37 (Round Avg: 164.49) - Î”: +385.88 - Soph Nelson
+   9. Bijan Robinson            (2023) - Rd  7 - VOR: 532.99 (Round Avg: 164.49) - Î”: +368.51 - Jack Gilmore
+  10. Joe Burrow                (2021) - Rd  6 - VOR: 565.10 (Round Avg: 228.62) - Î”: +336.48 - Jackson Slaughter
 
 BEST DRAFT PICK BY YEAR (vs Round Average):
-  2021: Ja'Marr Chase             - Rd  9 - VOR: 803.35 (Round Avg: 110.11) - Î”: +693.25 - Seasons:  5 - Jackson Slaughter
-  2022: Amon-Ra St. Brown         - Rd  8 - VOR: 650.80 (Round Avg: 124.71) - Î”: +526.09 - Seasons:  4 - Veronica Agne
-  2023: Jahmyr Gibbs              - Rd  7 - VOR: 563.76 (Round Avg: 167.50) - Î”: +396.26 - Seasons:  3 - Soph Nelson
-  2024: Jaxon Smith-Njigba        - Rd  9 - VOR: 331.48 (Round Avg:  53.20) - Î”: +278.29 - Seasons:  2 - Jack Gilmore
-  2025: Trevor Lawrence           - Rd 11 - VOR: 147.28 (Round Avg:  20.52) - Î”: +126.75 - Seasons:  1 - Derek Topper
+  2021: Ja'Marr Chase             - Rd  9 - VOR: 793.62 (Round Avg: 109.03) - Î”: +684.59 - Seasons:  5 - Jackson Slaughter
+  2022: Amon-Ra St. Brown         - Rd  8 - VOR: 639.93 (Round Avg: 123.14) - Î”: +516.80 - Seasons:  4 - Veronica Agne
+  2023: Jahmyr Gibbs              - Rd  7 - VOR: 550.37 (Round Avg: 164.49) - Î”: +385.88 - Seasons:  3 - Soph Nelson
+  2024: Jaxon Smith-Njigba        - Rd  9 - VOR: 317.96 (Round Avg:  52.02) - Î”: +265.95 - Seasons:  2 - Jack Gilmore
+  2025: Trevor Lawrence           - Rd 11 - VOR: 138.07 (Round Avg:  19.10) - Î”: +118.97 - Seasons:  1 - Derek Topper
 
 📈 MOST VALUE FROM KEEPERS:
    1. Jackson Slaughter              Total Keeper VOR: 2874.86
@@ -276,56 +336,17 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
   10. Soph Nelson                    Total Keeper VOR: 1544.48
 
 📊 MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):
-   1. Derek Topper                   Total Draft Pick VOR: 1395.43
-   2. Nick Bergeron                  Total Draft Pick VOR: 1327.94
-   3. Jack Gilmore                   Total Draft Pick VOR: 1220.44
-   4. Nadia Moumine                  Total Draft Pick VOR: 1114.98
-   5. Soph Nelson                    Total Draft Pick VOR: 994.00
-   6. Maggie Mansfield               Total Draft Pick VOR: 962.39
-   7. Jackson Slaughter              Total Draft Pick VOR: 925.34
-   8. Veronica Agne                  Total Draft Pick VOR: 888.11
-   9. Kilian Nelson                  Total Draft Pick VOR: 699.99
-  10. Peter Martino                  Total Draft Pick VOR: 405.96
+   1. Derek Topper                   Total Draft Pick VOR: 1368.42
+   2. Nick Bergeron                  Total Draft Pick VOR: 1313.00
+   3. Jack Gilmore                   Total Draft Pick VOR: 1207.96
+   4. Nadia Moumine                  Total Draft Pick VOR: 1100.36
+   5. Soph Nelson                    Total Draft Pick VOR: 989.27
+   6. Maggie Mansfield               Total Draft Pick VOR: 953.61
+   7. Jackson Slaughter              Total Draft Pick VOR: 894.61
+   8. Veronica Agne                  Total Draft Pick VOR: 858.86
+   9. Kilian Nelson                  Total Draft Pick VOR: 693.56
+  10. Peter Martino                  Total Draft Pick VOR: 391.54
 
 ================================================================================
-📮 TRANSACTION SPOTLIGHT
-================================================================================
-
-⚠️ No transactions captured for seasons: 2021, 2022, 2023, 2024, 2025. Verify league ID and cookies if activity is expected.
-
-📬 WAIVER WIRE WARRIOR (Most Claims):
-  No waiver claims recorded
-
-🔝 TOP 5 WAIVER/FREE AGENT ADDS (Tenure VOR):
-  No waiver/free agent pickups detected
-
-🤪 SICKO (Most Trades):
-   1. Jack Gilmore                   2 trades
-   2. Derek Topper                   2 trades
-   3. Jackson Slaughter              1 trades
-   4. Kilian Nelson                  1 trades
-
-🤝 BUSINESS PARTNERS (Most Trades Together):
-   1. Derek Topper         & Jack Gilmore         - 1 trades
-   2. Derek Topper         & Jackson Slaughter    - 1 trades
-
-
-================================================================================
-🏈 PLAYOFF SUMMARY
-================================================================================
-
-PLAYOFF APPEARANCES:
-   1. Kilian Nelson                  4 appearances
-   2. Jack Gilmore                   4 appearances
-   3. Nick Bergeron                  3 appearances
-   4. Derek Topper                   3 appearances
-   5. Veronica Agne                  3 appearances
-   6. Soph Nelson                    2 appearances
-   7. Maggie Mansfield               2 appearances
-   8. Jackson Slaughter              2 appearances
-   9. Peter Martino                  2 appearances
-  10. Nadia Moumine                  1 appearances
-
-================================================================================
-Generated on 2025-12-24 11:42:56
+Generated on 2025-12-24 12:42:50
 ================================================================================
