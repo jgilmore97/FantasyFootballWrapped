@@ -56,9 +56,9 @@ ALL-TIME WIN PERCENTAGE RANKINGS:
 💥 HIGHEST SINGLE WEEK: Derek Topper
    Score: 250.00
 
-🦵 PUNT GOD (Most D/ST, K, P Points): Jackson Slaughter
-   Total Special Teams Points: 3242.72
-   Defense/ST: 1415.00 | Kicker: 1364.60 | Punter: 463.12
+🦵 PUNT GOD (Most D/ST, K, P Points): Peter Martino
+   Total Special Teams Points: 3670.10
+   Defense/ST: 1887.00 | Kicker: 1229.00 | Punter: 554.10
 
 ================================================================================
 🩺 INJURY ANALYSIS
@@ -291,6 +291,8 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
 📮 TRANSACTION SPOTLIGHT
 ================================================================================
 
+⚠️ No transactions captured for seasons: 2021, 2022, 2023, 2024, 2025. Verify league ID and cookies if activity is expected.
+
 📬 WAIVER WIRE WARRIOR (Most Claims):
   No waiver claims recorded
 
@@ -298,10 +300,14 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
   No waiver/free agent pickups detected
 
 🤪 SICKO (Most Trades):
-  No trades recorded
+   1. Jack Gilmore                   2 trades
+   2. Derek Topper                   2 trades
+   3. Jackson Slaughter              1 trades
+   4. Kilian Nelson                  1 trades
 
 🤝 BUSINESS PARTNERS (Most Trades Together):
-  No paired trades recorded
+   1. Derek Topper         & Jack Gilmore         - 1 trades
+   2. Derek Topper         & Jackson Slaughter    - 1 trades
 
 
 ================================================================================
@@ -321,5 +327,5 @@ PLAYOFF APPEARANCES:
   10. Nadia Moumine                  1 appearances
 
 ================================================================================
-Generated on 2025-12-24 10:36:19
+Generated on 2025-12-24 11:42:56
 ================================================================================

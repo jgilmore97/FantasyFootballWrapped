@@ -6,7 +6,9 @@ A "Spotify Wrapped" style summary tool for ESPN Fantasy Football leagues
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
 from collections import defaultdict, Counter
 from datetime import datetime
 from typing import Dict, List, Tuple, Any
@@ -14,28 +16,88 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-try:
-    from espn_api.football import League
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-    import pandas as pd
-    import numpy as np
-    from PIL import Image
-    import requests
-    from io import BytesIO
-except ImportError as e:
-    print(f"Error: Missing required package. Please run: pip install -r requirements.txt")
-    print(f"Details: {e}")
-    exit(1)
+from espn_api.football import League
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import pandas as pd
+import numpy as np
+from PIL import Image
+import requests
+from io import BytesIO
 
 # ========================================
 # CONFIGURATION
 # ========================================
 
+
 LEAGUE_ID = 778135041
 YEARS = [2021, 2022, 2023, 2024, 2025]
 ESPN_S2 = "AECZk7m5ZiOXfGwzOnbj7p3EoalPIV2RCeA%2BjgMiZfLTu731Pjk1h%2FkbHIVTCJ7QD0vd4XlZ%2FVezppPxysurKT6DFjtS2U6hF5XJUmHcjvHewmCbPaWv1YNI0FpLdBEADn3N1xKN9ert4%2BA9pljrcO3v9zrPV9h0h7u9%2ByCKJDEYxAoZjIWQTHD2qHdY4EOhi%2F0Y8iZYlrMp1BRmI8HDmYcZjtUwXTL%2Bx3H70FZtE1bfXPyqxs1n5zgFc0X7tRu3I2GfdTazuworr3VflODY9fVi8Hsf9ttxlat1slyF5zBGng%3D%3D"
 SWID = "{CFD648CA-1223-407F-8E12-A5F773A4C738}"
+
+def _coerce_years(years_value) -> List[int]:
+    """Normalize a variety of year inputs into a sorted list of integers."""
+
+    if isinstance(years_value, list):
+        return [int(y) for y in years_value if str(y).strip()]
+
+    if isinstance(years_value, str):
+        cleaned = years_value.strip().strip("[]")
+        if not cleaned:
+            return []
+        parts = [p.strip() for p in cleaned.replace(";", ",").split(",") if p.strip()]
+        return [int(p) for p in parts]
+
+    if years_value:
+        try:
+            return [int(years_value)]
+        except Exception:
+            return []
+
+    return []
+
+
+def load_configuration() -> None:
+    """Load runtime configuration from CLI args and environment variables."""
+    global LEAGUE_ID, YEARS, ESPN_S2, SWID  # Must be FIRST, before any usage
+
+    parser = argparse.ArgumentParser(description="Generate a Fantasy Football Wrapped report")
+    parser.add_argument("--league-id", type=int, default=None,
+                        help="ESPN league ID (can also be set via LEAGUE_ID env var)")
+    parser.add_argument("--years", type=str, default=None,
+                        help="Comma-separated list of seasons to analyze (or YEARS env var)")
+    parser.add_argument("--espn-s2", dest="espn_s2", default=None,
+                        help="ESPN_S2 cookie value (or ESPN_S2 env var)")
+    parser.add_argument("--swid", dest="swid", default=None,
+                        help="SWID cookie value (or SWID env var)")
+
+    args = parser.parse_args()
+
+    # CLI args override env vars, which override hardcoded defaults
+    if args.league_id is not None:
+        LEAGUE_ID = args.league_id
+    elif os.getenv("LEAGUE_ID"):
+        LEAGUE_ID = int(os.getenv("LEAGUE_ID"))
+
+    if args.espn_s2:
+        ESPN_S2 = args.espn_s2
+    elif os.getenv("ESPN_S2"):
+        ESPN_S2 = os.getenv("ESPN_S2")
+
+    if args.swid:
+        SWID = args.swid
+    elif os.getenv("SWID"):
+        SWID = os.getenv("SWID")
+
+    if args.years:
+        YEARS = _coerce_years(args.years)
+    elif os.getenv("YEARS"):
+        YEARS = _coerce_years(os.getenv("YEARS"))
+
+    print("Using configuration:")
+    print(f"  League ID: {LEAGUE_ID}")
+    print(f"  Years: {', '.join(str(y) for y in YEARS)}")
+    print("  Auth: espn_s2 and SWID provided")
 
 # Position-specific thresholds for "startable" players (for value over replacement)
 STARTABLE_THRESHOLDS = {
@@ -62,6 +124,9 @@ INJURY_STATUSES = [
 def load_league_data(year: int) -> League:
     """Load league data for a specific year."""
     print(f"Loading {year} season data...")
+    league_url = f"https://fantasy.espn.com/football/league?leagueId={LEAGUE_ID}&seasonId={year}"
+    print(f"  League URL: {league_url}")
+
     try:
         league = League(
             league_id=LEAGUE_ID,
@@ -72,6 +137,7 @@ def load_league_data(year: int) -> League:
         return league
     except Exception as e:
         print(f"Error loading {year} data: {e}")
+        print("  Verify the league ID and authentication cookies (espn_s2, SWID) are correct and current.")
         return None
 
 
@@ -199,6 +265,8 @@ def extract_all_data():
             team_id = getattr(team, 'team_id', None)
             if team_id is None:
                 team_id = getattr(team, 'teamId', None)
+            if team_id is None:
+                team_id = getattr(team, 'id', None)
             if team_id is not None:
                 all_data['team_id_to_owner'][year][team_id] = owner_name
 
@@ -571,13 +639,20 @@ def parse_transaction_actions(transaction, team_id_to_owner: Dict) -> List[Dict[
     raw_actions = getattr(transaction, 'actions', []) or []
 
     for action in raw_actions:
-        # Expected structure: (team, player_obj, action_type)
+        # Expected structure: (team, action_type, player_obj) or (team, player_obj, action_type)
         if not isinstance(action, (list, tuple)) or len(action) < 3:
             continue
 
         raw_team = action[0]
-        player_obj = action[1]
-        action_type = str(action[2]).upper()
+        candidate_a = action[1]
+        candidate_b = action[2]
+
+        if isinstance(candidate_a, str):
+            action_type = str(candidate_a).upper()
+            player_obj = candidate_b
+        else:
+            player_obj = candidate_a
+            action_type = str(candidate_b).upper()
 
         owner = None
         team_id = None
@@ -591,8 +666,8 @@ def parse_transaction_actions(transaction, team_id_to_owner: Dict) -> List[Dict[
             owner = team_id_to_owner.get(team_id)
             if owner is None and isinstance(raw_team, str) and raw_team in team_id_to_owner:
                 owner = team_id_to_owner[raw_team]
-        elif hasattr(raw_team, 'team_id') or hasattr(raw_team, 'teamId'):
-            team_id = getattr(raw_team, 'team_id', None) or getattr(raw_team, 'teamId', None)
+        elif hasattr(raw_team, 'team_id') or hasattr(raw_team, 'teamId') or hasattr(raw_team, 'id'):
+            team_id = getattr(raw_team, 'team_id', None) or getattr(raw_team, 'teamId', None) or getattr(raw_team, 'id', None)
             owner = team_id_to_owner.get(team_id)
         elif isinstance(raw_team, str):
             owner = raw_team
@@ -605,14 +680,90 @@ def parse_transaction_actions(transaction, team_id_to_owner: Dict) -> List[Dict[
 
         player_name, player_key = _normalize_player_from_obj(player_obj)
 
+        normalized_action = action_type
+        if action_type in {'ADDED', 'ADD', 'WAIVER', 'WAIVER_ADD', 'FREEAGENT', 'FREE AGENT'}:
+            normalized_action = 'ADD'
+        elif action_type in {'DROP', 'DROPPED'}:
+            normalized_action = 'DROP'
+        elif action_type in {'TRADED', 'TRADE'}:
+            normalized_action = 'TRADED'
+
         parsed.append({
             'owner': owner,
-            'action': action_type,
+            'action': normalized_action,
             'player_key': player_key,
             'player_name': player_name,
         })
 
     return parsed
+
+def _get_transaction_year(txn) -> int:
+    """Extract the year from a transaction's date/timestamp."""
+    date_val = getattr(txn, 'date', None) or getattr(txn, 'timestamp', None)
+    
+    if date_val is None:
+        return None
+    
+    # Handle datetime objects
+    if hasattr(date_val, 'year'):
+        return date_val.year
+    
+    # Handle epoch milliseconds (common ESPN format)
+    if isinstance(date_val, (int, float)):
+        if date_val > 1e12:  # Likely milliseconds
+            date_val = date_val / 1000
+        try:
+            from datetime import datetime
+            dt = datetime.fromtimestamp(date_val)
+            return dt.year
+        except:
+            return None
+    
+    return None
+
+
+def collect_all_transactions_from_current_season(league: League, all_data: Dict) -> Dict[int, list]:
+    """
+    Fetch all historical transactions from the current season's endpoint.
+    ESPN stores cumulative transaction history accessible only from the most recent season.
+    """
+    transactions_by_year = defaultdict(list)
+    seen_keys = set()
+    all_transactions = []
+    
+    for msg_type in ['WAIVER', 'FREEAGENT', 'TRADED', None]:
+        try:
+            if msg_type:
+                batch = league.recent_activity(size=2000, msg_type=msg_type)
+            else:
+                batch = league.recent_activity(size=2000)
+            
+            for txn in batch or []:
+                identity = (
+                    getattr(txn, 'id', None),
+                    getattr(txn, 'date', None) or getattr(txn, 'timestamp', None),
+                    getattr(txn, 'type', None),
+                    len(getattr(txn, 'actions', []) or []),
+                )
+                if identity not in seen_keys:
+                    seen_keys.add(identity)
+                    all_transactions.append(txn)
+        except Exception as e:
+            pass  # Silent - we'll report summary at end
+    
+    # Categorize by year
+    years_found = Counter()
+    for txn in all_transactions:
+        txn_year = _get_transaction_year(txn)
+        if txn_year and txn_year in YEARS:
+            transactions_by_year[txn_year].append(txn)
+            years_found[txn_year] += 1
+    
+    if years_found:
+        summary = ", ".join(f"{y}: {c}" for y, c in sorted(years_found.items()))
+        print(f"  Historical transactions recovered by year: {summary}")
+    
+    return transactions_by_year
 
 
 def collect_transactions(league: League, year: int, all_data: Dict) -> None:
@@ -627,22 +778,146 @@ def collect_transactions(league: League, year: int, all_data: Dict) -> None:
 
     transactions = []
 
+    source_counts = {}
+    seen_keys = set()
+
+    def _add_transactions(items, label: str) -> None:
+        count = 0
+        for txn in items or []:
+            identity = (
+                getattr(txn, 'id', None),
+                getattr(txn, 'date', None) or getattr(txn, 'timestamp', None),
+                getattr(txn, 'type', None),
+                len(getattr(txn, 'actions', []) or []),
+            )
+            if identity in seen_keys:
+                continue
+            seen_keys.add(identity)
+            transactions.append(txn)
+            count += 1
+        source_counts[label] = count
+
     try:
         tx_attr = getattr(league, 'transactions', None)
         if callable(tx_attr):
-            transactions.extend(tx_attr())
+            _add_transactions(tx_attr(), 'transactions_endpoint')
         elif tx_attr:
-            transactions.extend(list(tx_attr))
+            _add_transactions(list(tx_attr), 'transactions_iterable')
     except Exception as e:
-        print(f"  Warning: Could not fetch transactions for {year} via league.transactions: {e}")
+        if year == max(YEARS):
+            print(f"  Warning: Could not fetch transactions for {year} via league.transactions: {e}")
+
+    for msg_type in ['WAIVER', 'FREEAGENT', 'TRADED']:
+        try:
+            _add_transactions(league.recent_activity(size=500, msg_type=msg_type), f"recent_{msg_type.lower()}")
+        except Exception as e:
+            # Only warn for current season - historical seasons often fail
+            if year == max(YEARS):
+                print(f"  Warning: Could not fetch recent activity for {year} (msg_type={msg_type}): {e}")
 
     try:
-        recent = league.recent_activity(size=1000)
-        transactions.extend(recent)
+        _add_transactions(league.recent_activity(size=250), 'recent_all')
     except Exception as e:
-        print(f"  Warning: Could not fetch recent activity for {year}: {e}")
+        if year == max(YEARS):
+            print(f"  Warning: Could not fetch catch-all recent activity for {year}: {e}")
 
-    if not transactions:
+    # For the most recent season, try to recover historical transactions via bulk fetch
+    if year == max(YEARS):
+        print(f"  Attempting bulk historical transaction fetch from {year}...")
+        historical = collect_all_transactions_from_current_season(league, all_data)
+        
+        # Process historical transactions for past years
+        for hist_year, hist_txns in historical.items():
+            if hist_year != year:
+                # Build combined team_id_map for historical matching
+                combined_team_id_map = {}
+                for y in YEARS:
+                    combined_team_id_map.update(all_data['team_id_to_owner'].get(y, {}))
+                
+                hist_waiver_claims = all_data['waiver_claims'][hist_year]
+                hist_waiver_add_records = all_data['waiver_add_records'][hist_year]
+                hist_trade_moves = all_data['trade_moves'][hist_year]
+                hist_trade_counts = all_data['trade_counts'][hist_year]
+                hist_trade_pairs = all_data['trade_pairs'][hist_year]
+                
+                for txn in hist_txns:
+                    txn_type = str(getattr(txn, 'type', '') or '').upper()
+                    actions = parse_transaction_actions(txn, combined_team_id_map)
+                    
+                    if not actions:
+                        continue
+                    
+                    if not txn_type:
+                        action_types = {a['action'] for a in actions}
+                        if 'TRADED' in action_types:
+                            txn_type = 'TRADE'
+                        elif 'ADD' in action_types:
+                            txn_type = 'WAIVER'
+                    
+                    if txn_type in {'WAIVER', 'FREEAGENT', 'FREE AGENT', 'ADD', 'WAIVER_ADD'}:
+                        for action in actions:
+                            if action['action'] == 'ADD':
+                                hist_waiver_claims[action['owner']] += 1
+                                hist_waiver_add_records.append({
+                                    'owner': action['owner'],
+                                    'player_key': action['player_key'],
+                                    'player_name': action['player_name'],
+                                    'year': hist_year,
+                                    'method': txn_type or 'ADD'
+                                })
+                    elif txn_type == 'TRADE':
+                        owners_involved = set()
+                        adds = defaultdict(list)
+                        drops = defaultdict(list)
+                        
+                        for action in actions:
+                            owner = action['owner']
+                            if owner:
+                                owners_involved.add(owner)
+                            if action['action'] == 'ADD':
+                                adds[action['player_key']].append(action)
+                            elif action['action'] == 'DROP':
+                                drops[action['player_key']].append(action)
+                        
+                        for owner in owners_involved:
+                            hist_trade_counts[owner] += 1
+                        
+                        sorted_owners = sorted([o for o in owners_involved if o])
+                        for i in range(len(sorted_owners)):
+                            for j in range(i + 1, len(sorted_owners)):
+                                pair = (sorted_owners[i], sorted_owners[j])
+                                hist_trade_pairs[pair] += 1
+                        
+                        for player_key, add_actions in adds.items():
+                            from_owner = drops.get(player_key, [{}])[0].get('owner') if drops.get(player_key) else None
+                            for add_action in add_actions:
+                                hist_trade_moves.append({
+                                    'player_key': player_key,
+                                    'player_name': add_action['player_name'],
+                                    'from_owner': from_owner,
+                                    'to_owner': add_action['owner'],
+                                    'year': hist_year,
+                                })
+        
+        # Add current year's transactions from bulk fetch
+        if year in historical:
+            for txn in historical[year]:
+                identity = (
+                    getattr(txn, 'id', None),
+                    getattr(txn, 'date', None) or getattr(txn, 'timestamp', None),
+                    getattr(txn, 'type', None),
+                    len(getattr(txn, 'actions', []) or []),
+                )
+                if identity not in seen_keys:
+                    seen_keys.add(identity)
+                    transactions.append(txn)
+
+    if source_counts:
+        summary = ", ".join(f"{k}: {v}" for k, v in source_counts.items())
+        print(f"  Transaction fetch summary for {year}: {summary}")
+
+    if not transactions and year == max(YEARS):
+        print(f"  Warning: No transactions were recorded for {year}. Check league ID and credentials if this seems incorrect.")
         return
 
     for txn in transactions:
@@ -651,6 +926,13 @@ def collect_transactions(league: League, year: int, all_data: Dict) -> None:
 
         if not actions:
             continue
+
+        if not txn_type:
+            action_types = {a['action'] for a in actions}
+            if 'TRADED' in action_types:
+                txn_type = 'TRADE'
+            elif 'ADD' in action_types:
+                txn_type = 'WAIVER'
 
         if txn_type in {'WAIVER', 'FREEAGENT', 'FREE AGENT', 'ADD', 'WAIVER_ADD'}:
             for action in actions:
@@ -697,7 +979,6 @@ def collect_transactions(league: League, year: int, all_data: Dict) -> None:
                         'to_owner': add_action['owner'],
                         'year': year,
                     })
-
 # ========================================
 # ANALYSIS FUNCTIONS
 # ========================================
@@ -2349,6 +2630,15 @@ def generate_report(all_data: Dict):
     waiver_summary = summarize_waiver_activity(all_data, vor_data)
     trade_summary = summarize_trade_activity(all_data, vor_data)
 
+    missing_transactions = [
+        year for year in all_data['leagues']
+        if not all_data['waiver_claims'].get(year) and not all_data['trade_moves'].get(year)
+    ]
+    if missing_transactions:
+        year_text = ', '.join(str(y) for y in sorted(missing_transactions))
+        report.append(f"⚠️ No transactions captured for seasons: {year_text}. Verify league ID and cookies if activity is expected.")
+        report.append("")
+
     # Waiver claim volume
     report.append("📬 WAIVER WIRE WARRIOR (Most Claims):")
     claim_counts = waiver_summary.get('claim_counts', Counter())
@@ -2453,9 +2743,12 @@ def generate_report(all_data: Dict):
 
 def main():
     """Main execution function."""
+    load_configuration()
+
+    year_span = f"{min(YEARS)}-{max(YEARS)}" if YEARS else "No years configured"
     print("=" * 80)
     print(" ESPN Fantasy Football Wrapped".center(80))
-    print(" Analyzing 5 Years of League History (2021-2025)".center(80))
+    print(f" Analyzing League History ({year_span})".center(80))
     print("=" * 80)
     print()
 
