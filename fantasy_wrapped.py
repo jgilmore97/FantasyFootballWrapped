@@ -848,6 +848,341 @@ def generate_h2h_matrix(h2h_stats: Dict) -> List[str]:
     return matrix
 
 
+def calculate_heartbreaker_award(matchups: List) -> Dict:
+    """
+    Find the manager with the most losses by less than 5 points.
+
+    Returns dict with 'manager', 'count', and 'close_losses' list.
+    """
+    close_losses = defaultdict(list)
+
+    for matchup in matchups:
+        home = matchup['home_team']
+        away = matchup['away_team']
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+        margin = abs(home_score - away_score)
+
+        if 0 < margin < 5:
+            # Close game
+            if home_score < away_score:
+                # Home team lost by less than 5
+                close_losses[home].append({
+                    'year': matchup['year'],
+                    'week': matchup['week'],
+                    'opponent': away,
+                    'score': home_score,
+                    'opponent_score': away_score,
+                    'margin': margin
+                })
+            else:
+                # Away team lost by less than 5
+                close_losses[away].append({
+                    'year': matchup['year'],
+                    'week': matchup['week'],
+                    'opponent': home,
+                    'score': away_score,
+                    'opponent_score': home_score,
+                    'margin': margin
+                })
+
+    if not close_losses:
+        return None
+
+    # Find manager with most close losses
+    heartbreaker = max(close_losses.items(), key=lambda x: len(x[1]))
+
+    return {
+        'manager': heartbreaker[0],
+        'count': len(heartbreaker[1]),
+        'close_losses': heartbreaker[1]
+    }
+
+
+def find_offensive_explosion(matchups: List) -> Dict:
+    """
+    Find the highest single-week score with context.
+
+    Returns dict with 'manager', 'score', 'year', 'week', 'opponent', 'opponent_score'.
+    """
+    best = None
+
+    for matchup in matchups:
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+
+        if home_score > (best['score'] if best else 0):
+            best = {
+                'manager': matchup['home_team'],
+                'score': home_score,
+                'year': matchup['year'],
+                'week': matchup['week'],
+                'opponent': matchup['away_team'],
+                'opponent_score': away_score
+            }
+
+        if away_score > (best['score'] if best else 0):
+            best = {
+                'manager': matchup['away_team'],
+                'score': away_score,
+                'year': matchup['year'],
+                'week': matchup['week'],
+                'opponent': matchup['home_team'],
+                'opponent_score': home_score
+            }
+
+    return best
+
+
+def find_offensive_dud(matchups: List) -> Dict:
+    """
+    Find the lowest single-week score with context.
+
+    Returns dict with 'manager', 'score', 'year', 'week', 'opponent', 'opponent_score'.
+    """
+    worst = None
+
+    for matchup in matchups:
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+
+        if worst is None or home_score < worst['score']:
+            worst = {
+                'manager': matchup['home_team'],
+                'score': home_score,
+                'year': matchup['year'],
+                'week': matchup['week'],
+                'opponent': matchup['away_team'],
+                'opponent_score': away_score
+            }
+
+        if worst is None or away_score < worst['score']:
+            worst = {
+                'manager': matchup['away_team'],
+                'score': away_score,
+                'year': matchup['year'],
+                'week': matchup['week'],
+                'opponent': matchup['home_team'],
+                'opponent_score': home_score
+            }
+
+    return worst
+
+
+def calculate_win_loss_streaks(matchups: List) -> Dict:
+    """
+    Calculate longest win and loss streaks for all managers.
+
+    Returns dict with 'longest_win_streak' and 'longest_loss_streak'.
+    """
+    # Sort matchups by year and week
+    sorted_matchups = sorted(matchups, key=lambda m: (m['year'], m['week']))
+
+    # Track current streaks for each manager
+    current_streaks = defaultdict(lambda: {'type': None, 'count': 0, 'start_year': None, 'start_week': None})
+    best_win_streaks = defaultdict(lambda: {'count': 0, 'start_year': None, 'start_week': None, 'end_year': None, 'end_week': None})
+    best_loss_streaks = defaultdict(lambda: {'count': 0, 'start_year': None, 'start_week': None, 'end_year': None, 'end_week': None})
+
+    for matchup in sorted_matchups:
+        home = matchup['home_team']
+        away = matchup['away_team']
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+        year = matchup['year']
+        week = matchup['week']
+
+        # Determine outcomes
+        if home_score > away_score:
+            home_result = 'win'
+            away_result = 'loss'
+        elif away_score > home_score:
+            home_result = 'loss'
+            away_result = 'win'
+        else:
+            home_result = 'tie'
+            away_result = 'tie'
+
+        # Update streaks for both teams
+        for manager, result in [(home, home_result), (away, away_result)]:
+            if result == 'tie':
+                # Ties break streaks
+                current_streaks[manager] = {'type': None, 'count': 0, 'start_year': None, 'start_week': None}
+                continue
+
+            current = current_streaks[manager]
+
+            if current['type'] == result:
+                # Continue streak
+                current['count'] += 1
+            else:
+                # Start new streak
+                current['type'] = result
+                current['count'] = 1
+                current['start_year'] = year
+                current['start_week'] = week
+
+            # Check if this is a new best
+            if result == 'win' and current['count'] > best_win_streaks[manager]['count']:
+                best_win_streaks[manager] = {
+                    'count': current['count'],
+                    'start_year': current['start_year'],
+                    'start_week': current['start_week'],
+                    'end_year': year,
+                    'end_week': week
+                }
+            elif result == 'loss' and current['count'] > best_loss_streaks[manager]['count']:
+                best_loss_streaks[manager] = {
+                    'count': current['count'],
+                    'start_year': current['start_year'],
+                    'start_week': current['start_week'],
+                    'end_year': year,
+                    'end_week': week
+                }
+
+    # Find overall longest streaks
+    longest_win = None
+    longest_loss = None
+
+    for manager, streak in best_win_streaks.items():
+        if streak['count'] > 0 and (longest_win is None or streak['count'] > longest_win['count']):
+            longest_win = {**streak, 'manager': manager}
+
+    for manager, streak in best_loss_streaks.items():
+        if streak['count'] > 0 and (longest_loss is None or streak['count'] > longest_loss['count']):
+            longest_loss = {**streak, 'manager': manager}
+
+    return {
+        'longest_win_streak': longest_win,
+        'longest_loss_streak': longest_loss
+    }
+
+
+def calculate_late_round_legend(all_data: Dict, vor_data: Dict) -> Dict:
+    """
+    Find the best draft pick from round 12 or later by VOR.
+
+    Returns dict with 'player', 'manager', 'year', 'round', 'pick', 'vor'.
+    """
+    best_late_pick = None
+
+    for year in YEARS:
+        if year not in all_data['draft_data']:
+            continue
+
+        draft_info = all_data['draft_data'][year]
+        picks = draft_info.get('picks', [])
+
+        for pick in picks:
+            round_num = pick.get('round_num')
+            if round_num and round_num >= 12:
+                player_key = pick.get('player_key')
+
+                # Get VOR for this player in this year
+                if year in vor_data and player_key in vor_data[year]:
+                    player_vor = vor_data[year][player_key]['vor']
+
+                    if best_late_pick is None or player_vor > best_late_pick['vor']:
+                        best_late_pick = {
+                            'player': pick.get('player_name', player_key),
+                            'manager': pick.get('team_owner', 'Unknown'),
+                            'year': year,
+                            'round': round_num,
+                            'pick': pick.get('overall_pick'),
+                            'vor': player_vor
+                        }
+
+    return best_late_pick
+
+
+def calculate_unlucky_loser(matchups: List) -> Dict:
+    """
+    Find the manager who scored the most total points in games they lost.
+
+    Returns dict with 'manager', 'total_points_in_losses', 'loss_count'.
+    """
+    points_in_losses = defaultdict(float)
+    loss_counts = defaultdict(int)
+
+    for matchup in matchups:
+        home = matchup['home_team']
+        away = matchup['away_team']
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+
+        if home_score < away_score:
+            # Home lost
+            points_in_losses[home] += home_score
+            loss_counts[home] += 1
+        elif away_score < home_score:
+            # Away lost
+            points_in_losses[away] += away_score
+            loss_counts[away] += 1
+
+    if not points_in_losses:
+        return None
+
+    unlucky = max(points_in_losses.items(), key=lambda x: x[1])
+
+    return {
+        'manager': unlucky[0],
+        'total_points_in_losses': unlucky[1],
+        'loss_count': loss_counts[unlucky[0]],
+        'avg_points_in_losses': unlucky[1] / loss_counts[unlucky[0]] if loss_counts[unlucky[0]] > 0 else 0
+    }
+
+
+def calculate_bad_beat(matchups: List) -> Dict:
+    """
+    Find instances where someone scored 2nd highest in a week but still lost.
+
+    Returns the worst bad beat (highest 2nd place score that lost).
+    """
+    # Group matchups by year and week
+    weekly_scores = defaultdict(list)
+
+    for matchup in matchups:
+        key = (matchup['year'], matchup['week'])
+        weekly_scores[key].append({
+            'manager': matchup['home_team'],
+            'score': matchup['home_score'],
+            'opponent': matchup['away_team'],
+            'opponent_score': matchup['away_score']
+        })
+        weekly_scores[key].append({
+            'manager': matchup['away_team'],
+            'score': matchup['away_score'],
+            'opponent': matchup['home_team'],
+            'opponent_score': matchup['home_score']
+        })
+
+    worst_bad_beat = None
+
+    for (year, week), scores in weekly_scores.items():
+        # Sort by score descending
+        sorted_scores = sorted(scores, key=lambda x: x['score'], reverse=True)
+
+        if len(sorted_scores) >= 2:
+            first = sorted_scores[0]
+            second = sorted_scores[1]
+
+            # Check if second place lost their matchup
+            if second['score'] < second['opponent_score']:
+                # This is a bad beat
+                if worst_bad_beat is None or second['score'] > worst_bad_beat['score']:
+                    worst_bad_beat = {
+                        'manager': second['manager'],
+                        'score': second['score'],
+                        'year': year,
+                        'week': week,
+                        'opponent': second['opponent'],
+                        'opponent_score': second['opponent_score'],
+                        'top_score': first['score'],
+                        'top_scorer': first['manager']
+                    }
+
+    return worst_bad_beat
+
+
 def calculate_value_over_replacement(all_data: Dict) -> Dict:
     """Calculate value over replacement for all players."""
     vor_data = {}
@@ -1930,19 +2265,84 @@ def generate_report(all_data: Dict):
                      f"{stats['ties']:2d} ({w_pct:5.1f}%)")
     report.append("")
 
-    # Highest Single Week
-    highest_week_score = 0
-    highest_week_team = None
-    for team, stats in team_stats.items():
-        if stats['weekly_scores']:
-            max_score = max(stats['weekly_scores'])
-            if max_score > highest_week_score:
-                highest_week_score = max_score
-                highest_week_team = team
+    # ========================================
+    # SCORING & MATCHUP AWARDS
+    # ========================================
 
-    report.append(f"💥 HIGHEST SINGLE WEEK: {highest_week_team}")
-    report.append(f"   Score: {highest_week_score:.2f}")
-    report.append("")
+    # Offensive Explosion
+    explosion = find_offensive_explosion(all_data['matchups'])
+    if explosion:
+        report.append(f"💥 OFFENSIVE EXPLOSION (Highest Single Week): {explosion['manager']}")
+        report.append(f"   Score: {explosion['score']:.2f}")
+        report.append(f"   When: {explosion['year']} Week {explosion['week']}")
+        report.append(f"   vs {explosion['opponent']} ({explosion['opponent_score']:.2f})")
+        report.append("")
+
+    # Offensive Dud
+    dud = find_offensive_dud(all_data['matchups'])
+    if dud:
+        report.append(f"💀 OFFENSIVE DUD (Lowest Single Week): {dud['manager']}")
+        report.append(f"   Score: {dud['score']:.2f}")
+        report.append(f"   When: {dud['year']} Week {dud['week']}")
+        report.append(f"   vs {dud['opponent']} ({dud['opponent_score']:.2f})")
+        report.append("")
+
+    # Heartbreaker
+    heartbreaker = calculate_heartbreaker_award(all_data['matchups'])
+    if heartbreaker:
+        report.append(f"💔 HEARTBREAKER (Most Losses by <5 Points): {heartbreaker['manager']}")
+        report.append(f"   Close Losses: {heartbreaker['count']}")
+        if heartbreaker['close_losses']:
+            # Show a few examples
+            report.append("   Recent heartbreaks:")
+            for loss in heartbreaker['close_losses'][-3:]:
+                report.append(f"     {loss['year']} Wk{loss['week']}: Lost {loss['score']:.2f}-{loss['opponent_score']:.2f} "
+                             f"vs {loss['opponent']} (margin: {loss['margin']:.2f})")
+        report.append("")
+
+    # Win and Loss Streaks
+    streaks = calculate_win_loss_streaks(all_data['matchups'])
+    if streaks['longest_win_streak']:
+        ws = streaks['longest_win_streak']
+        report.append(f"🔥 LONGEST WIN STREAK: {ws['manager']}")
+        report.append(f"   {ws['count']} wins in a row")
+        report.append(f"   {ws['start_year']} Week {ws['start_week']} - {ws['end_year']} Week {ws['end_week']}")
+        report.append("")
+
+    if streaks['longest_loss_streak']:
+        ls = streaks['longest_loss_streak']
+        report.append(f"😭 LONGEST LOSING STREAK: {ls['manager']}")
+        report.append(f"   {ls['count']} losses in a row")
+        report.append(f"   {ls['start_year']} Week {ls['start_week']} - {ls['end_year']} Week {ls['end_week']}")
+        report.append("")
+
+    # Unlucky Loser
+    unlucky = calculate_unlucky_loser(all_data['matchups'])
+    if unlucky:
+        report.append(f"😤 UNLUCKY LOSER (Most Points in Losses): {unlucky['manager']}")
+        report.append(f"   Total Points in Losses: {unlucky['total_points_in_losses']:.2f}")
+        report.append(f"   Losses: {unlucky['loss_count']}")
+        report.append(f"   Average Points in Losses: {unlucky['avg_points_in_losses']:.2f}")
+        report.append("")
+
+    # Bad Beat
+    bad_beat = calculate_bad_beat(all_data['matchups'])
+    if bad_beat:
+        report.append(f"🎰 BAD BEAT (2nd Highest Score but Lost): {bad_beat['manager']}")
+        report.append(f"   Score: {bad_beat['score']:.2f}")
+        report.append(f"   When: {bad_beat['year']} Week {bad_beat['week']}")
+        report.append(f"   Lost to {bad_beat['opponent']} ({bad_beat['opponent_score']:.2f})")
+        report.append(f"   Week's top score: {bad_beat['top_scorer']} ({bad_beat['top_score']:.2f})")
+        report.append("")
+
+    # Late Round Legend
+    late_legend = calculate_late_round_legend(all_data, vor_data)
+    if late_legend:
+        report.append(f"💎 LATE ROUND LEGEND (Best Pick Rd 12+): {late_legend['player']}")
+        report.append(f"   Drafted by: {late_legend['manager']}")
+        report.append(f"   {late_legend['year']} - Round {late_legend['round']}, Pick {late_legend['pick']}")
+        report.append(f"   Value Over Replacement: {late_legend['vor']:.2f}")
+        report.append("")
 
     # Punt God Award
     punt_god, punt_god_points, punt_breakdown = calculate_punt_god(all_data)
