@@ -174,6 +174,13 @@ def extract_all_data():
             'player_id': None,
             'owners': set()
         })),
+        # NEW: Transaction and acquisition tracking
+        'team_id_to_owner': defaultdict(dict),  # year -> team_id -> owner name
+        'waiver_claims': defaultdict(Counter),  # year -> owner -> count
+        'waiver_add_records': defaultdict(list),  # year -> list of waiver/FA adds
+        'trade_moves': defaultdict(list),  # year -> list of player transfers
+        'trade_counts': defaultdict(Counter),  # year -> owner -> trade count
+        'trade_pairs': defaultdict(Counter),  # year -> (owner_a, owner_b) -> count
     }
 
     for year in YEARS:
@@ -187,6 +194,13 @@ def extract_all_data():
         for team in league.teams:
             team_name = team.team_name
             owner_name = get_owner_name(team)
+
+            # Track team_id -> owner mapping for transaction parsing
+            team_id = getattr(team, 'team_id', None)
+            if team_id is None:
+                team_id = getattr(team, 'teamId', None)
+            if team_id is not None:
+                all_data['team_id_to_owner'][year][team_id] = owner_name
 
             # Use owner name as primary identifier (more stable than team name)
             identifier = f"{owner_name}"
@@ -311,6 +325,12 @@ def extract_all_data():
             process_player_data(league, year, all_data)
         except Exception as e:
             print(f"  Warning: Could not process player data for {year}: {e}")
+
+        # Transactions (waivers and trades)
+        try:
+            collect_transactions(league, year, all_data)
+        except Exception as e:
+            print(f"  Warning: Could not process transactions for {year}: {e}")
 
     return all_data
 
@@ -519,6 +539,164 @@ def process_player_data(league: League, year: int, all_data: Dict):
     except Exception as e:
         print(f"  Could not process draft data for {year}: {e}")
 
+
+# ========================================
+# TRANSACTION PARSING
+# ========================================
+
+def _normalize_player_from_obj(player_obj):
+    """Extract a stable player name and key from a transaction action."""
+
+    player_name = getattr(player_obj, 'name', None) or getattr(player_obj, 'fullName', None)
+    if isinstance(player_name, dict):
+        player_name = player_name.get('fullName') or player_name.get('name') or str(player_name)
+    elif player_name and not isinstance(player_name, str):
+        player_name = str(player_name)
+
+    player_id = (
+        getattr(player_obj, 'playerId', None)
+        or getattr(player_obj, 'id', None)
+        or getattr(player_obj, 'player_id', None)
+    )
+
+    player_key = str(player_id) if player_id else player_name or str(player_obj)
+
+    return player_name or player_key, player_key
+
+
+def parse_transaction_actions(transaction, team_id_to_owner: Dict) -> List[Dict[str, Any]]:
+    """Normalize a transaction's actions into owner/player records."""
+
+    parsed = []
+    raw_actions = getattr(transaction, 'actions', []) or []
+
+    for action in raw_actions:
+        # Expected structure: (team, player_obj, action_type)
+        if not isinstance(action, (list, tuple)) or len(action) < 3:
+            continue
+
+        raw_team = action[0]
+        player_obj = action[1]
+        action_type = str(action[2]).upper()
+
+        owner = None
+        team_id = None
+
+        if isinstance(raw_team, (int, str)):
+            # Map team id to owner if we have it
+            try:
+                team_id = int(raw_team)
+            except Exception:
+                team_id = raw_team
+            owner = team_id_to_owner.get(team_id)
+            if owner is None and isinstance(raw_team, str) and raw_team in team_id_to_owner:
+                owner = team_id_to_owner[raw_team]
+        elif hasattr(raw_team, 'team_id') or hasattr(raw_team, 'teamId'):
+            team_id = getattr(raw_team, 'team_id', None) or getattr(raw_team, 'teamId', None)
+            owner = team_id_to_owner.get(team_id)
+        elif isinstance(raw_team, str):
+            owner = raw_team
+
+        if owner is None:
+            try:
+                owner = get_owner_name(raw_team)
+            except Exception:
+                owner = str(raw_team)
+
+        player_name, player_key = _normalize_player_from_obj(player_obj)
+
+        parsed.append({
+            'owner': owner,
+            'action': action_type,
+            'player_key': player_key,
+            'player_name': player_name,
+        })
+
+    return parsed
+
+
+def collect_transactions(league: League, year: int, all_data: Dict) -> None:
+    """Capture waiver claims and trades for transaction-based awards."""
+
+    team_id_map = all_data['team_id_to_owner'].get(year, {})
+    waiver_claims = all_data['waiver_claims'][year]
+    waiver_add_records = all_data['waiver_add_records'][year]
+    trade_moves = all_data['trade_moves'][year]
+    trade_counts = all_data['trade_counts'][year]
+    trade_pairs = all_data['trade_pairs'][year]
+
+    transactions = []
+
+    try:
+        tx_attr = getattr(league, 'transactions', None)
+        if callable(tx_attr):
+            transactions.extend(tx_attr())
+        elif tx_attr:
+            transactions.extend(list(tx_attr))
+    except Exception as e:
+        print(f"  Warning: Could not fetch transactions for {year} via league.transactions: {e}")
+
+    try:
+        recent = league.recent_activity(size=1000)
+        transactions.extend(recent)
+    except Exception as e:
+        print(f"  Warning: Could not fetch recent activity for {year}: {e}")
+
+    if not transactions:
+        return
+
+    for txn in transactions:
+        txn_type = str(getattr(txn, 'type', '') or '').upper()
+        actions = parse_transaction_actions(txn, team_id_map)
+
+        if not actions:
+            continue
+
+        if txn_type in {'WAIVER', 'FREEAGENT', 'FREE AGENT', 'ADD', 'WAIVER_ADD'}:
+            for action in actions:
+                if action['action'] == 'ADD':
+                    waiver_claims[action['owner']] += 1
+                    waiver_add_records.append({
+                        'owner': action['owner'],
+                        'player_key': action['player_key'],
+                        'player_name': action['player_name'],
+                        'year': year,
+                        'method': txn_type or 'ADD'
+                    })
+        elif txn_type == 'TRADE':
+            owners_involved = set()
+            adds = defaultdict(list)
+            drops = defaultdict(list)
+
+            for action in actions:
+                owner = action['owner']
+                if owner:
+                    owners_involved.add(owner)
+
+                if action['action'] == 'ADD':
+                    adds[action['player_key']].append(action)
+                elif action['action'] == 'DROP':
+                    drops[action['player_key']].append(action)
+
+            for owner in owners_involved:
+                trade_counts[owner] += 1
+
+            sorted_owners = sorted([o for o in owners_involved if o])
+            for i in range(len(sorted_owners)):
+                for j in range(i + 1, len(sorted_owners)):
+                    pair = (sorted_owners[i], sorted_owners[j])
+                    trade_pairs[pair] += 1
+
+            for player_key, add_actions in adds.items():
+                from_owner = drops.get(player_key, [{}])[0].get('owner') if drops.get(player_key) else None
+                for add_action in add_actions:
+                    trade_moves.append({
+                        'player_key': player_key,
+                        'player_name': add_action['player_name'],
+                        'from_owner': from_owner,
+                        'to_owner': add_action['owner'],
+                        'year': year,
+                    })
 
 # ========================================
 # ANALYSIS FUNCTIONS
@@ -769,18 +947,61 @@ def calculate_value_over_replacement(all_data: Dict) -> Dict:
     return vor_data
 
 
+def build_player_owner_shares(all_data: Dict) -> Dict[int, Dict[str, Dict[str, float]]]:
+    """Estimate how much of each season's value belonged to each owner."""
+
+    shares_by_year: Dict[int, Dict[str, Dict[str, float]]] = defaultdict(dict)
+
+    for year in YEARS:
+        week_rosters = all_data['weekly_rosters'].get(year, {})
+        player_weeks: Dict[str, Counter] = defaultdict(Counter)
+        max_week_seen = 0
+
+        for week, rosters in week_rosters.items():
+            max_week_seen = max(max_week_seen, week)
+            for owner, roster in rosters.items():
+                for player_key in roster:
+                    player_weeks[player_key][owner] += 1
+
+        total_weeks = all_data['season_weeks'].get(year, 0)
+        # Use observed data if configured total weeks is missing
+        total_weeks = max(total_weeks, max_week_seen)
+
+        if total_weeks == 0:
+            total_weeks = 1  # Avoid division by zero; will fall back to season owner mapping below
+
+        for player_key, owner_counts in player_weeks.items():
+            shares_by_year[year][player_key] = {
+                owner: owner_count / total_weeks
+                for owner, owner_count in owner_counts.items()
+                if total_weeks > 0
+            }
+
+        # Fallback: if we have no weekly roster data for a player, attribute the
+        # full season to the roster owner recorded in player_seasons.
+        for player_key, seasons in all_data['player_seasons'].items():
+            if year in seasons and player_key not in shares_by_year[year]:
+                owner = seasons[year].get('team_owner')
+                if owner:
+                    shares_by_year[year][player_key] = {owner: 1.0}
+
+    return shares_by_year
+
+
 def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> Tuple[List[Dict], Dict[int, Dict[int, float]]]:
     """
     Find the best draft picks by comparing VOR to round average.
-    
+
     Returns:
         Tuple of (best_picks list, round_averages_by_year dict)
-        
+
     The value_score is calculated as delta vs round average - how much better
     a pick performed compared to other players drafted in the same round that year.
     This properly rewards late-round steals over early-round picks that merely
     met expectations.
     """
+    owner_shares_by_year = build_player_owner_shares(all_data)
+
     # First pass: collect all picks with their VOR data
     all_picks = []
     player_id_to_name = all_data.get('player_id_to_name', {})
@@ -790,29 +1011,47 @@ def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> Tuple[List[Dict], D
             continue
 
         draft = all_data['draft_data'][year]
-        year_vor = vor_data[year]
+        year_vor_lookup = vor_data[year]
 
         for pick in draft['picks']:
             player_name = pick['player_name']
             # Use player_key for lookups (matches how VOR data is keyed)
             player_key = pick.get('player_key', player_name)
-            
+
             # Get display name from mapping
             display_name = player_id_to_name.get(player_key, player_name)
 
-            # Look at production in the draft year and all future years.
-            future_years = [
-                y for y in YEARS
-                if y >= year and y in vor_data and player_key in vor_data[y]
-            ]
+            drafting_owner = get_owner_name(pick['team']) if pick['team'] else 'Unknown'
 
-            if not future_years:
+            # Look at production in the draft year and all future years where the drafting
+            # owner actually rostered the player.
+            tenure_years = []
+            tenure_vor = 0.0
+            draft_year_vor = 0.0
+
+            for candidate_year in YEARS:
+                if candidate_year < year:
+                    continue
+                if candidate_year not in vor_data or player_key not in vor_data[candidate_year]:
+                    continue
+
+                owner_shares = owner_shares_by_year.get(candidate_year, {}).get(player_key, {})
+                share = owner_shares.get(drafting_owner, 0.0)
+                if share <= 0:
+                    continue
+
+                year_vor_value = vor_data[candidate_year][player_key]['vor'] * share
+                tenure_vor += year_vor_value
+                tenure_years.append(candidate_year)
+
+                if candidate_year == year:
+                    draft_year_vor = year_vor_value
+
+            if not tenure_years:
                 continue
 
-            total_future_vor = sum(vor_data[y][player_key]['vor'] for y in future_years)
-            avg_future_vor = total_future_vor / len(future_years)
-            draft_year_vor = year_vor[player_key]['vor'] if player_key in year_vor else 0
-            draft_year_points = year_vor[player_key]['points'] if player_key in year_vor else 0
+            avg_tenure_vor = tenure_vor / len(tenure_years)
+            draft_year_points = year_vor_lookup.get(player_key, {}).get('points', 0)
 
             round_num = pick['round'] if pick['round'] else 1
             is_keeper = pick['is_keeper']
@@ -823,13 +1062,13 @@ def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> Tuple[List[Dict], D
                 'player_key': player_key,  # Keep key for internal lookups
                 'round': round_num,
                 'overall': pick['overall'],
-                'vor': total_future_vor,
+                'vor': tenure_vor,
                 'draft_year_vor': draft_year_vor,
-                'avg_future_vor': avg_future_vor,
-                'seasons_contributing': len(future_years),
+                'avg_future_vor': avg_tenure_vor,
+                'seasons_contributing': len(set(tenure_years)),
                 'points': draft_year_points,
                 'is_keeper': is_keeper,
-                'team': get_owner_name(pick['team']) if pick['team'] else 'Unknown'
+                'team': drafting_owner
             })
 
     # Second pass: calculate round averages per year (excluding keepers for fair comparison)
@@ -896,8 +1135,16 @@ def calculate_keeper_value(all_data: Dict, vor_data: Dict) -> Dict[str, float]:
 
 
 def calculate_draft_pick_value(all_data: Dict, vor_data: Dict) -> Dict[str, float]:
-    """Calculate total non-keeper draft pick value for each manager."""
+    """Calculate total non-keeper draft pick value for each manager.
+
+    Attribution mirrors the tenure-based best-pick logic but only counts the
+    draft-year value for non-keeper selections. If a player is later kept, the
+    keeper-year VOR is excluded from this leaderboard; only the draft-year
+    production that occurred while the drafting owner rostered the player is
+    credited.
+    """
     draft_values = defaultdict(float)
+    owner_shares_by_year = build_player_owner_shares(all_data)
 
     for year in YEARS:
         if year not in all_data['draft_data'] or year not in vor_data:
@@ -911,16 +1158,153 @@ def calculate_draft_pick_value(all_data: Dict, vor_data: Dict) -> Dict[str, floa
         year_vor = vor_data[year]
 
         for pick in draft['picks']:
-            if not pick['is_keeper']:
-                # Use player_key for lookup (matches VOR data keys)
-                player_key = pick.get('player_key', pick['player_name'])
-                if player_key in year_vor:
-                    vor = year_vor[player_key]['vor']
-                    if pick['team']:
-                        owner = get_owner_name(pick['team'])
-                        draft_values[owner] += vor
+            if pick['is_keeper']:
+                continue
+
+            # Use player_key for lookup (matches VOR data keys)
+            player_key = pick.get('player_key', pick['player_name'])
+            if player_key not in year_vor:
+                continue
+
+            if not pick['team']:
+                continue
+
+            owner = get_owner_name(pick['team'])
+            owner_shares = owner_shares_by_year.get(year, {}).get(player_key, {})
+            share = owner_shares.get(owner, 0.0)
+
+            if share <= 0:
+                continue
+
+            vor = year_vor[player_key]['vor'] * share
+            draft_values[owner] += vor
 
     return draft_values
+
+
+def summarize_waiver_activity(all_data: Dict, vor_data: Dict) -> Dict[str, Any]:
+    """Summarize waiver/free agent activity and top pickups."""
+
+    owner_shares_by_year = build_player_owner_shares(all_data)
+    player_id_to_name = all_data.get('player_id_to_name', {})
+
+    total_claims = Counter()
+    for counter in all_data['waiver_claims'].values():
+        total_claims.update(counter)
+
+    waiver_add_records: List[Dict[str, Any]] = []
+    for year, records in all_data['waiver_add_records'].items():
+        waiver_add_records.extend([
+            {**rec, 'year': year} if 'year' not in rec else rec
+            for rec in records
+        ])
+
+    waiver_pickups = []
+
+    for record in waiver_add_records:
+        player_key = record.get('player_key')
+        owner = record.get('owner')
+        year = record.get('year')
+        player_name = player_id_to_name.get(player_key, record.get('player_name', player_key))
+
+        tenure_vor = 0.0
+        contributing_years = []
+
+        for candidate_year in YEARS:
+            if candidate_year < year:
+                continue
+            if candidate_year not in vor_data or player_key not in vor_data[candidate_year]:
+                continue
+
+            owner_shares = owner_shares_by_year.get(candidate_year, {}).get(player_key, {})
+            share = owner_shares.get(owner, 0.0)
+            if share <= 0:
+                continue
+
+            tenure_vor += vor_data[candidate_year][player_key]['vor'] * share
+            contributing_years.append(candidate_year)
+
+        if not contributing_years:
+            continue
+
+        waiver_pickups.append({
+            'owner': owner,
+            'player': player_name,
+            'player_key': player_key,
+            'year': year,
+            'tenure_vor': tenure_vor,
+            'seasons_contributing': len(set(contributing_years)),
+            'method': record.get('method', 'ADD')
+        })
+
+    waiver_pickups.sort(key=lambda x: x['tenure_vor'], reverse=True)
+
+    return {
+        'claim_counts': total_claims,
+        'top_adds': waiver_pickups[:5],
+    }
+
+
+def summarize_trade_activity(all_data: Dict, vor_data: Dict) -> Dict[str, Any]:
+    """Summarize trade volume and value transferred."""
+
+    owner_shares_by_year = build_player_owner_shares(all_data)
+    player_id_to_name = all_data.get('player_id_to_name', {})
+
+    trade_counts = Counter()
+    for counter in all_data['trade_counts'].values():
+        trade_counts.update(counter)
+
+    trade_pairs = Counter()
+    for counter in all_data['trade_pairs'].values():
+        trade_pairs.update(counter)
+
+    trade_value_acquired = defaultdict(float)
+    trade_value_lost = defaultdict(float)
+
+    for year, moves in all_data['trade_moves'].items():
+        for move in moves:
+            player_key = move.get('player_key')
+            to_owner = move.get('to_owner')
+            from_owner = move.get('from_owner')
+            player_name = player_id_to_name.get(player_key, move.get('player_name', player_key))
+
+            tenure_vor = 0.0
+            contributing_years = []
+
+            for candidate_year in YEARS:
+                if candidate_year < move.get('year', year):
+                    continue
+                if candidate_year not in vor_data or player_key not in vor_data[candidate_year]:
+                    continue
+
+                owner_shares = owner_shares_by_year.get(candidate_year, {}).get(player_key, {})
+                share = owner_shares.get(to_owner, 0.0)
+                if share <= 0:
+                    continue
+
+                tenure_vor += vor_data[candidate_year][player_key]['vor'] * share
+                contributing_years.append(candidate_year)
+
+            if tenure_vor <= 0:
+                continue
+
+            trade_value_acquired[to_owner] += tenure_vor
+            if from_owner:
+                trade_value_lost[from_owner] += tenure_vor
+
+            move['player_name'] = player_name
+            move['tenure_vor'] = tenure_vor
+            move['seasons_contributing'] = len(set(contributing_years))
+
+    top_pairs = sorted(trade_pairs.items(), key=lambda x: x[1], reverse=True)
+
+    return {
+        'trade_counts': trade_counts,
+        'trade_pairs': top_pairs,
+        'acquired': trade_value_acquired,
+        'lost': trade_value_lost,
+    }
 
 
 def build_draft_capital_lookup(all_data: Dict, vor_data: Dict) -> Dict[int, Dict[str, int]]:
@@ -1562,7 +1946,7 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
 
                 # Add player info next to headshot
                 info_text = f"{player_name}\n"
-                info_text += f"{player_data['year']} Ã¢â‚¬Â¢ {player_data['position']}\n"
+                info_text += f"{player_data['year']} • {player_data['position']}\n"
                 info_text += f"VOR: {player_data['vor']:.1f}"
 
                 player_ax.text(0.35, 0.5, info_text, transform=player_ax.transAxes,
@@ -1571,8 +1955,8 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
             else:
                 # No headshot, just show text
                 info_text = f"#{idx+1} {player_name}\n"
-                info_text += f"{player_data['year']} Ã¢â‚¬Â¢ {player_data['position']}\n"
-                info_text += f"VOR: {player_data['vor']:.1f} Ã¢â‚¬Â¢ Pts: {player_data['points']:.1f}"
+                info_text += f"{player_data['year']} • {player_data['position']}\n"
+                info_text += f"VOR: {player_data['vor']:.1f} • Pts: {player_data['points']:.1f}"
 
                 player_ax.text(0.5, 0.5, info_text, transform=player_ax.transAxes,
                              fontsize=8, ha='center', va='center',
@@ -1637,13 +2021,13 @@ def generate_report(all_data: Dict):
     # ========================================
     # CORE STATISTICS
     # ========================================
-    report.append("Ã°Å¸Ââ€  CORE AWARDS")
+    report.append("🏆 CORE AWARDS")
     report.append("=" * 80)
     report.append("")
 
     # All-Time Scoring Leader
     scoring_leader = max(team_stats.items(), key=lambda x: x[1]['total_points_for'])
-    report.append(f"Ã°Å¸â€œÅ  ALL-TIME SCORING LEADER: {scoring_leader[0]}")
+    report.append(f"📈 ALL-TIME SCORING LEADER: {scoring_leader[0]}")
     report.append(f"   Total Points: {scoring_leader[1]['total_points_for']:.2f}")
     report.append("")
 
@@ -1657,13 +2041,13 @@ def generate_report(all_data: Dict):
 
     # Unluckiest Manager
     unluckiest = max(team_stats.items(), key=lambda x: x[1]['total_points_against'])
-    report.append(f"Ã°Å¸ËœÂ¢ UNLUCKIEST MANAGER: {unluckiest[0]}")
+    report.append(f"😬 UNLUCKIEST MANAGER: {unluckiest[0]}")
     report.append(f"   Points Against: {unluckiest[1]['total_points_against']:.2f}")
     report.append("")
 
     # Luckiest Manager
     luckiest = min(team_stats.items(), key=lambda x: x[1]['total_points_against'])
-    report.append(f"Ã°Å¸Ââ‚¬ LUCKIEST MANAGER: {luckiest[0]}")
+    report.append(f"🍀 LUCKIEST MANAGER: {luckiest[0]}")
     report.append(f"   Points Against: {luckiest[1]['total_points_against']:.2f}")
     report.append("")
 
@@ -1682,7 +2066,7 @@ def generate_report(all_data: Dict):
                    best_record_team[1]['ties'])
     win_pct = (best_record_team[1]['wins'] + 0.5 * best_record_team[1]['ties']) / total_games * 100
 
-    report.append(f"Ã°Å¸Ââ€¦ BEST ALL-TIME RECORD: {best_record_team[0]}")
+    report.append(f"🥇 BEST ALL-TIME RECORD: {best_record_team[0]}")
     report.append(f"   Record: {best_record_team[1]['wins']}-{best_record_team[1]['losses']}-"
                  f"{best_record_team[1]['ties']} ({win_pct:.1f}%)")
     report.append("")
@@ -1710,14 +2094,14 @@ def generate_report(all_data: Dict):
                 highest_week_score = max_score
                 highest_week_team = team
 
-    report.append(f"Ã°Å¸â€™Â¯ HIGHEST SINGLE WEEK: {highest_week_team}")
+    report.append(f"💥 HIGHEST SINGLE WEEK: {highest_week_team}")
     report.append(f"   Score: {highest_week_score:.2f}")
     report.append("")
 
     # Punt God Award
     punt_god, punt_god_points, punt_breakdown = calculate_punt_god(all_data)
     if punt_god:
-        report.append(f"Ã°Å¸Â¦Â¶ PUNT GOD (Most D/ST, K, P Points): {punt_god}")
+        report.append(f"🦵 PUNT GOD (Most D/ST, K, P Points): {punt_god}")
         report.append(f"   Total Special Teams Points: {punt_god_points:.2f}")
         report.append(f"   Defense/ST: {punt_breakdown['D/ST']:.2f} | "
                      f"Kicker: {punt_breakdown['K']:.2f} | "
@@ -1728,12 +2112,12 @@ def generate_report(all_data: Dict):
     # INJURY ANALYSIS
     # ========================================
     report.append("=" * 80)
-    report.append("Ã°Å¸ÂÂ¥ INJURY ANALYSIS")
+    report.append("🩺 INJURY ANALYSIS")
     report.append("=" * 80)
     report.append("")
 
     most_injured = max(team_stats.items(), key=lambda x: x[1]['injury_weeks'])
-    report.append(f"Ã°Å¸Â¤â€¢ MOST INJURED TEAM: {most_injured[0]}")
+    report.append(f"🤒 MOST INJURED TEAM: {most_injured[0]}")
     report.append(f"   Total Injury-Weeks: {most_injured[1]['injury_weeks']}")
     report.append(f"   Worst Single Week: {most_injured[1]['max_injuries_single_week']} injuries")
 
@@ -1755,7 +2139,7 @@ def generate_report(all_data: Dict):
     # WEIGHTED INJURY IMPACT
     # ========================================
     report.append("=" * 80)
-    report.append("ðŸ’¸ INJURY IMPACT (Draft Capital Weighted)")
+    report.append("💸 INJURY IMPACT (Draft Capital Weighted)")
     report.append("=" * 80)
     report.append("")
     
@@ -1765,47 +2149,21 @@ def generate_report(all_data: Dict):
     report.append("")
     
     weighted_injury_data = calculate_weighted_injury_impact(all_data, vor_data)
-    
-    # Weighted injury score rankings
-    report.append("WEIGHTED INJURY SCORE RANKINGS:")
-    sorted_scores = sorted(weighted_injury_data['manager_scores'].items(), 
-                          key=lambda x: x[1], reverse=True)
-    for i, (manager, score) in enumerate(sorted_scores, 1):
-        report.append(f"  {i:2d}. {manager:30s} {score:6.0f} pts lost")
-    report.append("")
-    
-    # Most costly single injuries
-    report.append("MOST COSTLY SINGLE INJURIES:")
-    most_costly = weighted_injury_data['most_costly']
-    sorted_costly = sorted(most_costly.items(), 
-                          key=lambda x: x[1]['total_impact'], reverse=True)
-    for manager, injury in sorted_costly:
-        # Convert draft capital back to approximate round for display
-        approx_round = 16 - injury['draft_capital']
-        year = injury.get('year', '')
-        report.append(f"  {manager:25s}: {injury['player_name']} ({year}, Rd {approx_round}) - "
-                     f"{injury['weeks']} wks Ã— {injury['draft_capital']} pts = "
-                     f"{injury['total_impact']} pts lost")
-    report.append("")
-    
-    # Season-ending injuries detected
-    season_ending = weighted_injury_data['season_ending']
-    if any(season_ending.values()):
-        report.append("SEASON-ENDING INJURIES DETECTED:")
-        report.append("(Players dropped while injured who never played again that season)")
-        for manager, injuries in sorted(season_ending.items()):
-            for inj in injuries:
-                report.append(f"  {manager}: {inj['player_name']} ({inj['year']}) - "
-                             f"last rostered wk {inj['last_rostered_week']}, "
-                             f"+{inj['remaining_weeks']} wks credited = "
-                             f"+{inj['additional_impact']:.0f} pts")
+
+    weighted_scores = weighted_injury_data['manager_scores']
+    if weighted_scores:
+        report.append("WEIGHTED INJURY SCORE RANKINGS:")
+        for i, (manager, score) in enumerate(sorted(weighted_scores.items(),
+                                                    key=lambda x: x[1],
+                                                    reverse=True), 1):
+            report.append(f"  {i:2d}. {manager:30s} Weighted Injury Score: {score:.0f}")
         report.append("")
 
     # ========================================
     # NEMESIS & VICTIMS (FPS-Style Rivalry Stats)
     # ========================================
     report.append("=" * 80)
-    report.append("Ã¢Å¡â€Ã¯Â¸Â  NEMESIS & VICTIMS")
+    report.append("⚔️  NEMESIS & VICTIMS")
     report.append("=" * 80)
     report.append("")
 
@@ -1820,7 +2178,7 @@ def generate_report(all_data: Dict):
         # Nemesis (who crushed them the most)
         if data['nemesis']:
             nem = data['nemesis']
-            report.append(f"  Ã°Å¸â€™â‚¬ Nemesis: {nem['opponent']}")
+            report.append(f"  👿 Nemesis: {nem['opponent']}")
             report.append(f"     Scored {nem['avg_points_against']:.1f} pts/game against you "
                          f"({nem['total_points_against']:.1f} total, {nem['games']} games)")
             report.append(f"     Your record vs them: {nem['record']}")
@@ -1828,7 +2186,7 @@ def generate_report(all_data: Dict):
         # Victim (who they crushed the most)
         if data['victim']:
             vic = data['victim']
-            report.append(f"  Ã°Å¸Å½Â¯ Victim: {vic['opponent']}")
+            report.append(f"  🏹 Victim: {vic['opponent']}")
             report.append(f"     You scored {vic['avg_points_for']:.1f} pts/game against them "
                          f"({vic['total_points_for']:.1f} total, {vic['games']} games)")
             report.append(f"     Your record vs them: {vic['record']}")
@@ -1839,13 +2197,13 @@ def generate_report(all_data: Dict):
     # PLAYER DEEP DIVE
     # ========================================
     report.append("=" * 80)
-    report.append("Ã¢Â­Â PLAYER DEEP DIVE")
+    report.append("🔍 PLAYER DEEP DIVE")
     report.append("=" * 80)
     report.append("")
 
     # Most Valuable Player (Single Season)
     mvp, mvp_year, mvp_info = find_most_valuable_player(vor_data)
-    report.append(f"Ã°Å¸Å’Å¸ MOST VALUABLE PLAYER (Single Season): {mvp}")
+    report.append(f"🏅 MOST VALUABLE PLAYER (Single Season): {mvp}")
     report.append(f"   Season: {mvp_year}")
     report.append(f"   Position: {mvp_info['position']}")
     report.append(f"   Total Points: {mvp_info['points']:.2f}")
@@ -1860,7 +2218,7 @@ def generate_report(all_data: Dict):
     if total_vor_rankings:
         top_total = total_vor_rankings[0]
         years_str = ', '.join(str(y) for y in top_total['years'])
-        report.append(f"Ã°Å¸Ââ€  MOST VALUABLE PLAYER (5-Year Total VOR): {top_total['player']}")
+        report.append(f"🏆 MOST VALUABLE PLAYER (5-Year Total VOR): {top_total['player']}")
         report.append(f"   Position: {top_total['position']}")
         report.append(f"   Total VOR (2021-2025): {top_total['total_vor']:.2f}")
         report.append(f"   Seasons Played: {top_total['seasons_played']} ({years_str})")
@@ -1871,7 +2229,7 @@ def generate_report(all_data: Dict):
     if avg_vor_rankings:
         top_avg = avg_vor_rankings[0]
         years_str = ', '.join(str(y) for y in top_avg['years'])
-        report.append(f"Ã¢Â­Â MOST VALUABLE PLAYER (5-Year Average VOR): {top_avg['player']}")
+        report.append(f"🏅 MOST VALUABLE PLAYER (5-Year Average VOR): {top_avg['player']}")
         report.append(f"   Position: {top_avg['position']}")
         report.append(f"   Average VOR per Season: {top_avg['avg_vor']:.2f}")
         report.append(f"   Seasons Played: {top_avg['seasons_played']} ({years_str})")
@@ -1924,7 +2282,7 @@ def generate_report(all_data: Dict):
     # Best Draft Picks
     best_picks, round_average_by_year = find_best_draft_picks(all_data, vor_data)
 
-    report.append("ðŸŽ¯ BEST DRAFT PICKS (By Î” vs Round Average):")
+    report.append("🎯 BEST DRAFT PICKS (By Δ vs Round Average):")
     non_keeper_picks = [p for p in best_picks if not p['is_keeper']][:10]
     for i, pick in enumerate(non_keeper_picks, 1):
         report.append(f"  {i:2d}. {pick['player']:25s} ({pick['year']}) - "
@@ -1964,7 +2322,7 @@ def generate_report(all_data: Dict):
 
     # Keeper Value
     keeper_values = calculate_keeper_value(all_data, vor_data)
-    report.append("Ã°Å¸â€â€™ MOST VALUE FROM KEEPERS:")
+    report.append("📈 MOST VALUE FROM KEEPERS:")
     for i, (team, value) in enumerate(sorted(keeper_values.items(),
                                              key=lambda x: x[1],
                                              reverse=True), 1):
@@ -1973,7 +2331,7 @@ def generate_report(all_data: Dict):
 
     # Draft Pick Value (non-keepers, years 2-5)
     draft_values = calculate_draft_pick_value(all_data, vor_data)
-    report.append("Ã°Å¸â€œÂ MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):")
+    report.append("📊 MOST VALUE FROM DRAFT PICKS (Non-Keepers, 2022-2025):")
     for i, (team, value) in enumerate(sorted(draft_values.items(),
                                              key=lambda x: x[1],
                                              reverse=True), 1):
@@ -1981,19 +2339,78 @@ def generate_report(all_data: Dict):
     report.append("")
 
     # ========================================
-    # CHAMPIONSHIP & PLAYOFF SUMMARY
+    # TRANSACTION SPOTLIGHT
     # ========================================
     report.append("=" * 80)
-    report.append("Ã°Å¸Ââ€  CHAMPIONSHIPS & PLAYOFF SUMMARY")
+    report.append("📮 TRANSACTION SPOTLIGHT")
     report.append("=" * 80)
     report.append("")
 
-    report.append("CHAMPIONSHIP COUNT:")
-    for i, (team, stats) in enumerate(sorted(team_stats.items(),
-                                             key=lambda x: x[1]['championships'],
-                                             reverse=True), 1):
-        if stats['championships'] > 0:
-            report.append(f"  {team:30s} {stats['championships']} championship(s)")
+    waiver_summary = summarize_waiver_activity(all_data, vor_data)
+    trade_summary = summarize_trade_activity(all_data, vor_data)
+
+    # Waiver claim volume
+    report.append("📬 WAIVER WIRE WARRIOR (Most Claims):")
+    claim_counts = waiver_summary.get('claim_counts', Counter())
+    if claim_counts:
+        for i, (owner, count) in enumerate(claim_counts.most_common(5), 1):
+            report.append(f"  {i:2d}. {owner:30s} {count} claims")
+    else:
+        report.append("  No waiver claims recorded")
+    report.append("")
+
+    # Top waiver/FA pickups by tenure VOR
+    report.append("🔝 TOP 5 WAIVER/FREE AGENT ADDS (Tenure VOR):")
+    top_adds = waiver_summary.get('top_adds', [])
+    if top_adds:
+        for i, add in enumerate(top_adds, 1):
+            report.append(
+                f"  {i:2d}. {add['player']:25s} ({add['year']}) - "
+                f"VOR: {add['tenure_vor']:6.2f} - {add['owner']}"
+            )
+    else:
+        report.append("  No waiver/free agent pickups detected")
+    report.append("")
+
+    # Trade volume
+    report.append("🤪 SICKO (Most Trades):")
+    trade_counts = trade_summary.get('trade_counts', Counter())
+    if trade_counts:
+        for i, (owner, count) in enumerate(trade_counts.most_common(5), 1):
+            report.append(f"  {i:2d}. {owner:30s} {count} trades")
+    else:
+        report.append("  No trades recorded")
+    report.append("")
+
+    # Top trading partners
+    report.append("🤝 BUSINESS PARTNERS (Most Trades Together):")
+    top_pairs = trade_summary.get('trade_pairs', [])
+    if top_pairs:
+        for i, (pair, count) in enumerate(top_pairs[:5], 1):
+            team_a, team_b = pair
+            report.append(f"  {i:2d}. {team_a:20s} & {team_b:20s} - {count} trades")
+    else:
+        report.append("  No paired trades recorded")
+    report.append("")
+
+    # Trade value exchange
+    acquired = trade_summary.get('acquired', {})
+    lost = trade_summary.get('lost', {})
+
+    if acquired:
+        shark, shark_vor = max(acquired.items(), key=lambda x: x[1])
+        report.append(f"🦈 SHARK (Most VOR Acquired via Trades): {shark} - {shark_vor:.2f} VOR")
+    if lost:
+        fish, fish_vor = max(lost.items(), key=lambda x: x[1])
+        report.append(f"🎣 FISH (Most VOR Sent Away via Trades): {fish} - {fish_vor:.2f} VOR")
+    report.append("")
+
+    # ========================================
+    # PLAYOFF SUMMARY
+    # ========================================
+    report.append("=" * 80)
+    report.append("🏈 PLAYOFF SUMMARY")
+    report.append("=" * 80)
     report.append("")
 
     report.append("PLAYOFF APPEARANCES:")
