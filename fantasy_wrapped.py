@@ -767,6 +767,87 @@ def calculate_nemesis_and_victims(h2h_stats: Dict) -> Dict:
     return nemesis_data
 
 
+def generate_h2h_matrix(h2h_stats: Dict) -> List[str]:
+    """
+    Generate a head-to-head record matrix showing all managers vs all managers.
+
+    Returns a list of formatted strings representing the table.
+    """
+    # Get all unique managers, sorted alphabetically
+    all_managers = sorted(set(h2h_stats.keys()))
+
+    if not all_managers:
+        return ["No head-to-head data available"]
+
+    # Create abbreviated names for column headers (use initials or first 3 chars)
+    def abbreviate_name(name):
+        """Create a short abbreviation for table headers."""
+        parts = name.split()
+        if len(parts) >= 2:
+            # Use first initial + last name first 2 chars
+            return f"{parts[0][0]}{parts[-1][:2]}"
+        else:
+            # Use first 3 characters
+            return name[:3]
+
+    abbrevs = {manager: abbreviate_name(manager) for manager in all_managers}
+
+    # Build header row with column numbers
+    matrix = []
+    matrix.append("")  # Empty line before table
+    matrix.append("ALL-TIME HEAD-TO-HEAD RECORDS MATRIX")
+    matrix.append("Records shown as W-L-T (Wins-Losses-Ties)")
+    matrix.append("")
+
+    # Create legend mapping numbers to managers
+    matrix.append("LEGEND:")
+    for i, manager in enumerate(all_managers, 1):
+        matrix.append(f"  {i:2d}. {manager}")
+    matrix.append("")
+
+    # Header row
+    header = "    |"
+    for i in range(len(all_managers)):
+        header += f"  {i+1:2d}  |"
+    matrix.append(header)
+    matrix.append("-" * len(header))
+
+    # Data rows
+    for i, manager_a in enumerate(all_managers):
+        row = f" {i+1:2d} |"
+
+        for j, manager_b in enumerate(all_managers):
+            if manager_a == manager_b:
+                # Diagonal - same manager
+                row += "  --  |"
+            else:
+                # Get record
+                stats = h2h_stats.get(manager_a, {}).get(manager_b, {})
+                wins = stats.get('wins', 0)
+                losses = stats.get('losses', 0)
+                ties = stats.get('ties', 0)
+
+                if wins + losses + ties == 0:
+                    # No games played
+                    row += "  --  |"
+                else:
+                    # Format as W-L or W-L-T
+                    if ties > 0:
+                        record = f"{wins}-{losses}-{ties}"
+                    else:
+                        record = f"{wins}-{losses}"
+                    row += f" {record:>4s} |"
+
+        matrix.append(row)
+
+    matrix.append("")
+    matrix.append("How to read: Row manager's record vs Column manager")
+    matrix.append("Example: Row 1, Column 2 shows manager #1's record against manager #2")
+    matrix.append("")
+
+    return matrix
+
+
 def calculate_value_over_replacement(all_data: Dict) -> Dict:
     """Calculate value over replacement for all players."""
     vor_data = {}
@@ -1957,6 +2038,10 @@ def generate_report(all_data: Dict):
             report.append(f"     Your record vs them: {vic['record']}")
 
         report.append("")
+
+    # Add head-to-head matrix
+    h2h_matrix = generate_h2h_matrix(h2h_stats)
+    report.extend(h2h_matrix)
 
     # ========================================
     # PLAYER DEEP DIVE
