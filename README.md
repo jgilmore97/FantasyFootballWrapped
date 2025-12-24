@@ -8,9 +8,18 @@ A "Spotify Wrapped" style summary tool for ESPN Fantasy Football leagues. This t
 - **All-Time Scoring Leader**: Most total points scored across all years
 - **Unluckiest/Luckiest Manager**: Most/least points scored against
 - **Best All-Time Record**: Highest win percentage
-- **Highest Single Week**: Highest individual weekly score
 - **Punt God**: Manager with most combined points from Defense/ST, Kicker, and Punter (2021-2025)
 - Complete rankings for all categories
+
+### Scoring & Matchup Awards
+- **💥 Offensive Explosion**: Highest single-week score ever (with year, week, and opponent)
+- **💀 Offensive Dud**: Lowest single-week score ever (with year, week, and opponent)
+- **💔 Heartbreaker**: Most losses by less than 5 points (with recent examples)
+- **🔥 Longest Win Streak**: Most consecutive wins (with date range)
+- **😭 Longest Losing Streak**: Most consecutive losses (with date range)
+- **😤 Unlucky Loser**: Most total points scored in games lost
+- **🎰 Bad Beat**: Scored 2nd highest in a week but still lost (worst instance)
+- **💎 Late Round Legend**: Best draft pick from round 12+ by Value Over Replacement
 
 ### Injury Analysis
 - **Most Injured Team Award**: Count of "injury-weeks" (players with OUT, IR, Doubtful, or Suspended status)
@@ -22,6 +31,9 @@ A "Spotify Wrapped" style summary tool for ESPN Fantasy Football leagues. This t
   - **Nemesis**: Opponent who scored the most points against you (average per game)
   - **Victim**: Opponent you scored the most points against (average per game)
   - Includes total points, games played, and head-to-head record
+- **Head-to-Head Records Matrix**: Complete W-L-T records for all manager matchups
+  - Easy-to-read table showing every manager vs every manager
+  - Includes legend for quick reference
 
 ### Player Deep Dive
 - **Most Valuable Player (Single Season)**: Best single-season performance based on Value Over Replacement (VOR)

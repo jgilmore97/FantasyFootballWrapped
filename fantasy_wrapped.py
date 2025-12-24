@@ -35,6 +35,12 @@ YEARS = [2021, 2022, 2023, 2024, 2025]
 ESPN_S2 = "AECZk7m5ZiOXfGwzOnbj7p3EoalPIV2RCeA%2BjgMiZfLTu731Pjk1h%2FkbHIVTCJ7QD0vd4XlZ%2FVezppPxysurKT6DFjtS2U6hF5XJUmHcjvHewmCbPaWv1YNI0FpLdBEADn3N1xKN9ert4%2BA9pljrcO3v9zrPV9h0h7u9%2ByCKJDEYxAoZjIWQTHD2qHdY4EOhi%2F0Y8iZYlrMp1BRmI8HDmYcZjtUwXTL%2Bx3H70FZtE1bfXPyqxs1n5zgFc0X7tRu3I2GfdTazuworr3VflODY9fVi8Hsf9ttxlat1slyF5zBGng%3D%3D"
 SWID = "{CFD648CA-1223-407F-8E12-A5F773A4C738}"
 
+# Weeks to exclude (for games that haven't happened yet)
+# Format: {year: [week1, week2, ...]}
+EXCLUDE_WEEKS = {
+    2025: [17]  # Week 17 2025 is the upcoming championship game
+}
+
 def _coerce_years(years_value) -> List[int]:
     """Normalize a variety of year inputs into a sorted list of integers."""
 
@@ -216,7 +222,6 @@ def extract_all_data():
             'injured_players': Counter(),
             'seasons_played': 0,
             'championships': 0,
-            'playoff_appearances': 0,
             'keeper_points': defaultdict(float),  # year -> points from keepers
             'draft_points': defaultdict(float),   # year -> points from draft picks
             'keeper_picks': defaultdict(list),    # year -> list of keeper picks
@@ -242,11 +247,6 @@ def extract_all_data():
         })),
         # NEW: Transaction and acquisition tracking
         'team_id_to_owner': defaultdict(dict),  # year -> team_id -> owner name
-        'waiver_claims': defaultdict(Counter),  # year -> owner -> count
-        'waiver_add_records': defaultdict(list),  # year -> list of waiver/FA adds
-        'trade_moves': defaultdict(list),  # year -> list of player transfers
-        'trade_counts': defaultdict(Counter),  # year -> owner -> trade count
-        'trade_pairs': defaultdict(Counter),  # year -> (owner_a, owner_b) -> count
     }
 
     for year in YEARS:
@@ -275,9 +275,7 @@ def extract_all_data():
 
             stats = all_data['team_stats'][identifier]
             stats['seasons_played'] += 1
-            stats['wins'] += team.wins
-            stats['losses'] += team.losses
-            stats['ties'] += team.ties
+            # Note: wins/losses/ties will be calculated from matchup data for accuracy
             stats['total_points_for'] += team.points_for
             stats['total_points_against'] += team.points_against
 
@@ -291,15 +289,18 @@ def extract_all_data():
             if hasattr(team, 'final_standing'):
                 if team.final_standing == 1:
                     stats['championships'] += 1
-                if team.final_standing <= 4:  # Assuming 4 teams make playoffs
-                    stats['playoff_appearances'] += 1
 
         # Process weekly matchups
         try:
             total_weeks = league.settings.reg_season_count
             all_data['season_weeks'][year] = total_weeks
-            
+
             for week in range(1, total_weeks + 1):
+                # Skip excluded weeks (e.g., games that haven't happened yet)
+                if year in EXCLUDE_WEEKS and week in EXCLUDE_WEEKS[year]:
+                    print(f"  Skipping {year} Week {week} (excluded - game hasn't happened yet)")
+                    continue
+
                 try:
                     box_scores = league.box_scores(week)
                     for matchup in box_scores:
@@ -394,11 +395,28 @@ def extract_all_data():
         except Exception as e:
             print(f"  Warning: Could not process player data for {year}: {e}")
 
-        # Transactions (waivers and trades)
-        try:
-            collect_transactions(league, year, all_data)
-        except Exception as e:
-            print(f"  Warning: Could not process transactions for {year}: {e}")
+    # Calculate wins/losses/ties from matchup data for accuracy
+    # (ESPN's team.wins/losses/ties can be inconsistent with actual matchup results)
+    print("\nCalculating wins/losses/ties from matchup data...")
+    for matchup in all_data['matchups']:
+        home = matchup['home_team']
+        away = matchup['away_team']
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+
+        home_stats = all_data['team_stats'][home]
+        away_stats = all_data['team_stats'][away]
+
+        if home_score > away_score:
+            home_stats['wins'] = home_stats.get('wins', 0) + 1
+            away_stats['losses'] = away_stats.get('losses', 0) + 1
+        elif away_score > home_score:
+            away_stats['wins'] = away_stats.get('wins', 0) + 1
+            home_stats['losses'] = home_stats.get('losses', 0) + 1
+        else:
+            # Tie
+            home_stats['ties'] = home_stats.get('ties', 0) + 1
+            away_stats['ties'] = away_stats.get('ties', 0) + 1
 
     return all_data
 
@@ -609,377 +627,6 @@ def process_player_data(league: League, year: int, all_data: Dict):
 
 
 # ========================================
-# TRANSACTION PARSING
-# ========================================
-
-def _normalize_player_from_obj(player_obj):
-    """Extract a stable player name and key from a transaction action."""
-
-    player_name = getattr(player_obj, 'name', None) or getattr(player_obj, 'fullName', None)
-    if isinstance(player_name, dict):
-        player_name = player_name.get('fullName') or player_name.get('name') or str(player_name)
-    elif player_name and not isinstance(player_name, str):
-        player_name = str(player_name)
-
-    player_id = (
-        getattr(player_obj, 'playerId', None)
-        or getattr(player_obj, 'id', None)
-        or getattr(player_obj, 'player_id', None)
-    )
-
-    player_key = str(player_id) if player_id else player_name or str(player_obj)
-
-    return player_name or player_key, player_key
-
-
-def parse_transaction_actions(transaction, team_id_to_owner: Dict) -> List[Dict[str, Any]]:
-    """Normalize a transaction's actions into owner/player records."""
-
-    parsed = []
-    raw_actions = getattr(transaction, 'actions', []) or []
-
-    for action in raw_actions:
-        # Expected structure: (team, action_type, player_obj) or (team, player_obj, action_type)
-        if not isinstance(action, (list, tuple)) or len(action) < 3:
-            continue
-
-        raw_team = action[0]
-        candidate_a = action[1]
-        candidate_b = action[2]
-
-        if isinstance(candidate_a, str):
-            action_type = str(candidate_a).upper()
-            player_obj = candidate_b
-        else:
-            player_obj = candidate_a
-            action_type = str(candidate_b).upper()
-
-        owner = None
-        team_id = None
-
-        if isinstance(raw_team, (int, str)):
-            # Map team id to owner if we have it
-            try:
-                team_id = int(raw_team)
-            except Exception:
-                team_id = raw_team
-            owner = team_id_to_owner.get(team_id)
-            if owner is None and isinstance(raw_team, str) and raw_team in team_id_to_owner:
-                owner = team_id_to_owner[raw_team]
-        elif hasattr(raw_team, 'team_id') or hasattr(raw_team, 'teamId') or hasattr(raw_team, 'id'):
-            team_id = getattr(raw_team, 'team_id', None) or getattr(raw_team, 'teamId', None) or getattr(raw_team, 'id', None)
-            owner = team_id_to_owner.get(team_id)
-        elif isinstance(raw_team, str):
-            owner = raw_team
-
-        if owner is None:
-            try:
-                owner = get_owner_name(raw_team)
-            except Exception:
-                owner = str(raw_team)
-
-        player_name, player_key = _normalize_player_from_obj(player_obj)
-
-        normalized_action = action_type
-        if action_type in {'ADDED', 'ADD', 'WAIVER', 'WAIVER_ADD', 'FREEAGENT', 'FREE AGENT'}:
-            normalized_action = 'ADD'
-        elif action_type in {'DROP', 'DROPPED'}:
-            normalized_action = 'DROP'
-        elif action_type in {'TRADED', 'TRADE'}:
-            normalized_action = 'TRADED'
-
-        parsed.append({
-            'owner': owner,
-            'action': normalized_action,
-            'player_key': player_key,
-            'player_name': player_name,
-        })
-
-    return parsed
-
-def _get_transaction_year(txn) -> int:
-    """Extract the year from a transaction's date/timestamp."""
-    date_val = getattr(txn, 'date', None) or getattr(txn, 'timestamp', None)
-    
-    if date_val is None:
-        return None
-    
-    # Handle datetime objects
-    if hasattr(date_val, 'year'):
-        return date_val.year
-    
-    # Handle epoch milliseconds (common ESPN format)
-    if isinstance(date_val, (int, float)):
-        if date_val > 1e12:  # Likely milliseconds
-            date_val = date_val / 1000
-        try:
-            from datetime import datetime
-            dt = datetime.fromtimestamp(date_val)
-            return dt.year
-        except:
-            return None
-    
-    return None
-
-
-def collect_all_transactions_from_current_season(league: League, all_data: Dict) -> Dict[int, list]:
-    """
-    Fetch all historical transactions from the current season's endpoint.
-    ESPN stores cumulative transaction history accessible only from the most recent season.
-    """
-    transactions_by_year = defaultdict(list)
-    seen_keys = set()
-    all_transactions = []
-    
-    for msg_type in ['WAIVER', 'FREEAGENT', 'TRADED', None]:
-        try:
-            if msg_type:
-                batch = league.recent_activity(size=2000, msg_type=msg_type)
-            else:
-                batch = league.recent_activity(size=2000)
-            
-            for txn in batch or []:
-                identity = (
-                    getattr(txn, 'id', None),
-                    getattr(txn, 'date', None) or getattr(txn, 'timestamp', None),
-                    getattr(txn, 'type', None),
-                    len(getattr(txn, 'actions', []) or []),
-                )
-                if identity not in seen_keys:
-                    seen_keys.add(identity)
-                    all_transactions.append(txn)
-        except Exception as e:
-            pass  # Silent - we'll report summary at end
-    
-    # Categorize by year
-    years_found = Counter()
-    for txn in all_transactions:
-        txn_year = _get_transaction_year(txn)
-        if txn_year and txn_year in YEARS:
-            transactions_by_year[txn_year].append(txn)
-            years_found[txn_year] += 1
-    
-    if years_found:
-        summary = ", ".join(f"{y}: {c}" for y, c in sorted(years_found.items()))
-        print(f"  Historical transactions recovered by year: {summary}")
-    
-    return transactions_by_year
-
-
-def collect_transactions(league: League, year: int, all_data: Dict) -> None:
-    """Capture waiver claims and trades for transaction-based awards."""
-
-    team_id_map = all_data['team_id_to_owner'].get(year, {})
-    waiver_claims = all_data['waiver_claims'][year]
-    waiver_add_records = all_data['waiver_add_records'][year]
-    trade_moves = all_data['trade_moves'][year]
-    trade_counts = all_data['trade_counts'][year]
-    trade_pairs = all_data['trade_pairs'][year]
-
-    transactions = []
-
-    source_counts = {}
-    seen_keys = set()
-
-    def _add_transactions(items, label: str) -> None:
-        count = 0
-        for txn in items or []:
-            identity = (
-                getattr(txn, 'id', None),
-                getattr(txn, 'date', None) or getattr(txn, 'timestamp', None),
-                getattr(txn, 'type', None),
-                len(getattr(txn, 'actions', []) or []),
-            )
-            if identity in seen_keys:
-                continue
-            seen_keys.add(identity)
-            transactions.append(txn)
-            count += 1
-        source_counts[label] = count
-
-    try:
-        tx_attr = getattr(league, 'transactions', None)
-        if callable(tx_attr):
-            _add_transactions(tx_attr(), 'transactions_endpoint')
-        elif tx_attr:
-            _add_transactions(list(tx_attr), 'transactions_iterable')
-    except Exception as e:
-        if year == max(YEARS):
-            print(f"  Warning: Could not fetch transactions for {year} via league.transactions: {e}")
-
-    for msg_type in ['WAIVER', 'FREEAGENT', 'TRADED']:
-        try:
-            _add_transactions(league.recent_activity(size=500, msg_type=msg_type), f"recent_{msg_type.lower()}")
-        except Exception as e:
-            # Only warn for current season - historical seasons often fail
-            if year == max(YEARS):
-                print(f"  Warning: Could not fetch recent activity for {year} (msg_type={msg_type}): {e}")
-
-    try:
-        _add_transactions(league.recent_activity(size=250), 'recent_all')
-    except Exception as e:
-        if year == max(YEARS):
-            print(f"  Warning: Could not fetch catch-all recent activity for {year}: {e}")
-
-    # For the most recent season, try to recover historical transactions via bulk fetch
-    if year == max(YEARS):
-        print(f"  Attempting bulk historical transaction fetch from {year}...")
-        historical = collect_all_transactions_from_current_season(league, all_data)
-        
-        # Process historical transactions for past years
-        for hist_year, hist_txns in historical.items():
-            if hist_year != year:
-                # Build combined team_id_map for historical matching
-                combined_team_id_map = {}
-                for y in YEARS:
-                    combined_team_id_map.update(all_data['team_id_to_owner'].get(y, {}))
-                
-                hist_waiver_claims = all_data['waiver_claims'][hist_year]
-                hist_waiver_add_records = all_data['waiver_add_records'][hist_year]
-                hist_trade_moves = all_data['trade_moves'][hist_year]
-                hist_trade_counts = all_data['trade_counts'][hist_year]
-                hist_trade_pairs = all_data['trade_pairs'][hist_year]
-                
-                for txn in hist_txns:
-                    txn_type = str(getattr(txn, 'type', '') or '').upper()
-                    actions = parse_transaction_actions(txn, combined_team_id_map)
-                    
-                    if not actions:
-                        continue
-                    
-                    if not txn_type:
-                        action_types = {a['action'] for a in actions}
-                        if 'TRADED' in action_types:
-                            txn_type = 'TRADE'
-                        elif 'ADD' in action_types:
-                            txn_type = 'WAIVER'
-                    
-                    if txn_type in {'WAIVER', 'FREEAGENT', 'FREE AGENT', 'ADD', 'WAIVER_ADD'}:
-                        for action in actions:
-                            if action['action'] == 'ADD':
-                                hist_waiver_claims[action['owner']] += 1
-                                hist_waiver_add_records.append({
-                                    'owner': action['owner'],
-                                    'player_key': action['player_key'],
-                                    'player_name': action['player_name'],
-                                    'year': hist_year,
-                                    'method': txn_type or 'ADD'
-                                })
-                    elif txn_type == 'TRADE':
-                        owners_involved = set()
-                        adds = defaultdict(list)
-                        drops = defaultdict(list)
-                        
-                        for action in actions:
-                            owner = action['owner']
-                            if owner:
-                                owners_involved.add(owner)
-                            if action['action'] == 'ADD':
-                                adds[action['player_key']].append(action)
-                            elif action['action'] == 'DROP':
-                                drops[action['player_key']].append(action)
-                        
-                        for owner in owners_involved:
-                            hist_trade_counts[owner] += 1
-                        
-                        sorted_owners = sorted([o for o in owners_involved if o])
-                        for i in range(len(sorted_owners)):
-                            for j in range(i + 1, len(sorted_owners)):
-                                pair = (sorted_owners[i], sorted_owners[j])
-                                hist_trade_pairs[pair] += 1
-                        
-                        for player_key, add_actions in adds.items():
-                            from_owner = drops.get(player_key, [{}])[0].get('owner') if drops.get(player_key) else None
-                            for add_action in add_actions:
-                                hist_trade_moves.append({
-                                    'player_key': player_key,
-                                    'player_name': add_action['player_name'],
-                                    'from_owner': from_owner,
-                                    'to_owner': add_action['owner'],
-                                    'year': hist_year,
-                                })
-        
-        # Add current year's transactions from bulk fetch
-        if year in historical:
-            for txn in historical[year]:
-                identity = (
-                    getattr(txn, 'id', None),
-                    getattr(txn, 'date', None) or getattr(txn, 'timestamp', None),
-                    getattr(txn, 'type', None),
-                    len(getattr(txn, 'actions', []) or []),
-                )
-                if identity not in seen_keys:
-                    seen_keys.add(identity)
-                    transactions.append(txn)
-
-    if source_counts:
-        summary = ", ".join(f"{k}: {v}" for k, v in source_counts.items())
-        print(f"  Transaction fetch summary for {year}: {summary}")
-
-    if not transactions and year == max(YEARS):
-        print(f"  Warning: No transactions were recorded for {year}. Check league ID and credentials if this seems incorrect.")
-        return
-
-    for txn in transactions:
-        txn_type = str(getattr(txn, 'type', '') or '').upper()
-        actions = parse_transaction_actions(txn, team_id_map)
-
-        if not actions:
-            continue
-
-        if not txn_type:
-            action_types = {a['action'] for a in actions}
-            if 'TRADED' in action_types:
-                txn_type = 'TRADE'
-            elif 'ADD' in action_types:
-                txn_type = 'WAIVER'
-
-        if txn_type in {'WAIVER', 'FREEAGENT', 'FREE AGENT', 'ADD', 'WAIVER_ADD'}:
-            for action in actions:
-                if action['action'] == 'ADD':
-                    waiver_claims[action['owner']] += 1
-                    waiver_add_records.append({
-                        'owner': action['owner'],
-                        'player_key': action['player_key'],
-                        'player_name': action['player_name'],
-                        'year': year,
-                        'method': txn_type or 'ADD'
-                    })
-        elif txn_type == 'TRADE':
-            owners_involved = set()
-            adds = defaultdict(list)
-            drops = defaultdict(list)
-
-            for action in actions:
-                owner = action['owner']
-                if owner:
-                    owners_involved.add(owner)
-
-                if action['action'] == 'ADD':
-                    adds[action['player_key']].append(action)
-                elif action['action'] == 'DROP':
-                    drops[action['player_key']].append(action)
-
-            for owner in owners_involved:
-                trade_counts[owner] += 1
-
-            sorted_owners = sorted([o for o in owners_involved if o])
-            for i in range(len(sorted_owners)):
-                for j in range(i + 1, len(sorted_owners)):
-                    pair = (sorted_owners[i], sorted_owners[j])
-                    trade_pairs[pair] += 1
-
-            for player_key, add_actions in adds.items():
-                from_owner = drops.get(player_key, [{}])[0].get('owner') if drops.get(player_key) else None
-                for add_action in add_actions:
-                    trade_moves.append({
-                        'player_key': player_key,
-                        'player_name': add_action['player_name'],
-                        'from_owner': from_owner,
-                        'to_owner': add_action['owner'],
-                        'year': year,
-                    })
-# ========================================
 # ANALYSIS FUNCTIONS
 # ========================================
 
@@ -1149,6 +796,422 @@ def calculate_nemesis_and_victims(h2h_stats: Dict) -> Dict:
         }
 
     return nemesis_data
+
+
+def generate_h2h_matrix(h2h_stats: Dict) -> List[str]:
+    """
+    Generate a head-to-head record matrix showing all managers vs all managers.
+
+    Returns a list of formatted strings representing the table.
+    """
+    # Get all unique managers, sorted alphabetically
+    all_managers = sorted(set(h2h_stats.keys()))
+
+    if not all_managers:
+        return ["No head-to-head data available"]
+
+    # Create abbreviated names for column headers (use initials or first 3 chars)
+    def abbreviate_name(name):
+        """Create a short abbreviation for table headers."""
+        parts = name.split()
+        if len(parts) >= 2:
+            # Use first initial + last name first 2 chars
+            return f"{parts[0][0]}{parts[-1][:2]}"
+        else:
+            # Use first 3 characters
+            return name[:3]
+
+    abbrevs = {manager: abbreviate_name(manager) for manager in all_managers}
+
+    # Build header row with column numbers
+    matrix = []
+    matrix.append("")  # Empty line before table
+    matrix.append("ALL-TIME HEAD-TO-HEAD RECORDS MATRIX")
+    matrix.append("Records shown as W-L-T (Wins-Losses-Ties)")
+    matrix.append("")
+
+    # Create legend mapping numbers to managers
+    matrix.append("LEGEND:")
+    for i, manager in enumerate(all_managers, 1):
+        matrix.append(f"  {i:2d}. {manager}")
+    matrix.append("")
+
+    # Header row
+    header = "    |"
+    for i in range(len(all_managers)):
+        header += f"  {i+1:2d}  |"
+    matrix.append(header)
+    matrix.append("-" * len(header))
+
+    # Data rows
+    for i, manager_a in enumerate(all_managers):
+        row = f" {i+1:2d} |"
+
+        for j, manager_b in enumerate(all_managers):
+            if manager_a == manager_b:
+                # Diagonal - same manager
+                row += "  --  |"
+            else:
+                # Get record
+                stats = h2h_stats.get(manager_a, {}).get(manager_b, {})
+                wins = stats.get('wins', 0)
+                losses = stats.get('losses', 0)
+                ties = stats.get('ties', 0)
+
+                if wins + losses + ties == 0:
+                    # No games played
+                    row += "  --  |"
+                else:
+                    # Format as W-L or W-L-T
+                    if ties > 0:
+                        record = f"{wins}-{losses}-{ties}"
+                    else:
+                        record = f"{wins}-{losses}"
+                    row += f" {record:>4s} |"
+
+        matrix.append(row)
+
+    matrix.append("")
+    matrix.append("How to read: Row manager's record vs Column manager")
+    matrix.append("Example: Row 1, Column 2 shows manager #1's record against manager #2")
+    matrix.append("")
+
+    return matrix
+
+
+def calculate_heartbreaker_award(matchups: List) -> Dict:
+    """
+    Find the manager with the most losses by less than 5 points.
+
+    Returns dict with 'manager', 'count', and 'close_losses' list.
+    """
+    close_losses = defaultdict(list)
+
+    for matchup in matchups:
+        home = matchup['home_team']
+        away = matchup['away_team']
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+        margin = abs(home_score - away_score)
+
+        if 0 < margin < 5:
+            # Close game
+            if home_score < away_score:
+                # Home team lost by less than 5
+                close_losses[home].append({
+                    'year': matchup['year'],
+                    'week': matchup['week'],
+                    'opponent': away,
+                    'score': home_score,
+                    'opponent_score': away_score,
+                    'margin': margin
+                })
+            else:
+                # Away team lost by less than 5
+                close_losses[away].append({
+                    'year': matchup['year'],
+                    'week': matchup['week'],
+                    'opponent': home,
+                    'score': away_score,
+                    'opponent_score': home_score,
+                    'margin': margin
+                })
+
+    if not close_losses:
+        return None
+
+    # Find manager with most close losses
+    heartbreaker = max(close_losses.items(), key=lambda x: len(x[1]))
+
+    return {
+        'manager': heartbreaker[0],
+        'count': len(heartbreaker[1]),
+        'close_losses': heartbreaker[1]
+    }
+
+
+def find_offensive_explosion(matchups: List) -> Dict:
+    """
+    Find the highest single-week score with context.
+
+    Returns dict with 'manager', 'score', 'year', 'week', 'opponent', 'opponent_score'.
+    """
+    best = None
+
+    for matchup in matchups:
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+
+        if home_score > (best['score'] if best else 0):
+            best = {
+                'manager': matchup['home_team'],
+                'score': home_score,
+                'year': matchup['year'],
+                'week': matchup['week'],
+                'opponent': matchup['away_team'],
+                'opponent_score': away_score
+            }
+
+        if away_score > (best['score'] if best else 0):
+            best = {
+                'manager': matchup['away_team'],
+                'score': away_score,
+                'year': matchup['year'],
+                'week': matchup['week'],
+                'opponent': matchup['home_team'],
+                'opponent_score': home_score
+            }
+
+    return best
+
+
+def find_offensive_dud(matchups: List) -> Dict:
+    """
+    Find the lowest single-week score with context.
+
+    Returns dict with 'manager', 'score', 'year', 'week', 'opponent', 'opponent_score'.
+    """
+    worst = None
+
+    for matchup in matchups:
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+
+        if worst is None or home_score < worst['score']:
+            worst = {
+                'manager': matchup['home_team'],
+                'score': home_score,
+                'year': matchup['year'],
+                'week': matchup['week'],
+                'opponent': matchup['away_team'],
+                'opponent_score': away_score
+            }
+
+        if worst is None or away_score < worst['score']:
+            worst = {
+                'manager': matchup['away_team'],
+                'score': away_score,
+                'year': matchup['year'],
+                'week': matchup['week'],
+                'opponent': matchup['home_team'],
+                'opponent_score': home_score
+            }
+
+    return worst
+
+
+def calculate_win_loss_streaks(matchups: List) -> Dict:
+    """
+    Calculate longest win and loss streaks for all managers.
+
+    Returns dict with 'longest_win_streak' and 'longest_loss_streak'.
+    """
+    # Sort matchups by year and week
+    sorted_matchups = sorted(matchups, key=lambda m: (m['year'], m['week']))
+
+    # Track current streaks for each manager
+    current_streaks = defaultdict(lambda: {'type': None, 'count': 0, 'start_year': None, 'start_week': None})
+    best_win_streaks = defaultdict(lambda: {'count': 0, 'start_year': None, 'start_week': None, 'end_year': None, 'end_week': None})
+    best_loss_streaks = defaultdict(lambda: {'count': 0, 'start_year': None, 'start_week': None, 'end_year': None, 'end_week': None})
+
+    for matchup in sorted_matchups:
+        home = matchup['home_team']
+        away = matchup['away_team']
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+        year = matchup['year']
+        week = matchup['week']
+
+        # Determine outcomes
+        if home_score > away_score:
+            home_result = 'win'
+            away_result = 'loss'
+        elif away_score > home_score:
+            home_result = 'loss'
+            away_result = 'win'
+        else:
+            home_result = 'tie'
+            away_result = 'tie'
+
+        # Update streaks for both teams
+        for manager, result in [(home, home_result), (away, away_result)]:
+            if result == 'tie':
+                # Ties break streaks
+                current_streaks[manager] = {'type': None, 'count': 0, 'start_year': None, 'start_week': None}
+                continue
+
+            current = current_streaks[manager]
+
+            if current['type'] == result:
+                # Continue streak
+                current['count'] += 1
+            else:
+                # Start new streak
+                current['type'] = result
+                current['count'] = 1
+                current['start_year'] = year
+                current['start_week'] = week
+
+            # Check if this is a new best
+            if result == 'win' and current['count'] > best_win_streaks[manager]['count']:
+                best_win_streaks[manager] = {
+                    'count': current['count'],
+                    'start_year': current['start_year'],
+                    'start_week': current['start_week'],
+                    'end_year': year,
+                    'end_week': week
+                }
+            elif result == 'loss' and current['count'] > best_loss_streaks[manager]['count']:
+                best_loss_streaks[manager] = {
+                    'count': current['count'],
+                    'start_year': current['start_year'],
+                    'start_week': current['start_week'],
+                    'end_year': year,
+                    'end_week': week
+                }
+
+    # Find overall longest streaks
+    longest_win = None
+    longest_loss = None
+
+    for manager, streak in best_win_streaks.items():
+        if streak['count'] > 0 and (longest_win is None or streak['count'] > longest_win['count']):
+            longest_win = {**streak, 'manager': manager}
+
+    for manager, streak in best_loss_streaks.items():
+        if streak['count'] > 0 and (longest_loss is None or streak['count'] > longest_loss['count']):
+            longest_loss = {**streak, 'manager': manager}
+
+    return {
+        'longest_win_streak': longest_win,
+        'longest_loss_streak': longest_loss
+    }
+
+
+def calculate_late_round_legend(all_data: Dict, vor_data: Dict) -> Dict:
+    """
+    Find the best draft pick from round 12 or later by VOR.
+
+    Returns dict with 'player', 'manager', 'year', 'round', 'pick', 'vor'.
+    """
+    best_late_pick = None
+
+    for year in YEARS:
+        if year not in all_data['draft_data']:
+            continue
+
+        draft_info = all_data['draft_data'][year]
+        picks = draft_info.get('picks', [])
+
+        for pick in picks:
+            round_num = pick.get('round_num')
+            if round_num and round_num >= 12:
+                player_key = pick.get('player_key')
+
+                # Get VOR for this player in this year
+                if year in vor_data and player_key in vor_data[year]:
+                    player_vor = vor_data[year][player_key]['vor']
+
+                    if best_late_pick is None or player_vor > best_late_pick['vor']:
+                        best_late_pick = {
+                            'player': pick.get('player_name', player_key),
+                            'manager': pick.get('team_owner', 'Unknown'),
+                            'year': year,
+                            'round': round_num,
+                            'pick': pick.get('overall_pick'),
+                            'vor': player_vor
+                        }
+
+    return best_late_pick
+
+
+def calculate_unlucky_loser(matchups: List) -> Dict:
+    """
+    Find the manager who scored the most total points in games they lost.
+
+    Returns dict with 'manager', 'total_points_in_losses', 'loss_count'.
+    """
+    points_in_losses = defaultdict(float)
+    loss_counts = defaultdict(int)
+
+    for matchup in matchups:
+        home = matchup['home_team']
+        away = matchup['away_team']
+        home_score = matchup['home_score']
+        away_score = matchup['away_score']
+
+        if home_score < away_score:
+            # Home lost
+            points_in_losses[home] += home_score
+            loss_counts[home] += 1
+        elif away_score < home_score:
+            # Away lost
+            points_in_losses[away] += away_score
+            loss_counts[away] += 1
+
+    if not points_in_losses:
+        return None
+
+    unlucky = max(points_in_losses.items(), key=lambda x: x[1])
+
+    return {
+        'manager': unlucky[0],
+        'total_points_in_losses': unlucky[1],
+        'loss_count': loss_counts[unlucky[0]],
+        'avg_points_in_losses': unlucky[1] / loss_counts[unlucky[0]] if loss_counts[unlucky[0]] > 0 else 0
+    }
+
+
+def calculate_bad_beat(matchups: List) -> Dict:
+    """
+    Find instances where someone scored 2nd highest in a week but still lost.
+
+    Returns the worst bad beat (highest 2nd place score that lost).
+    """
+    # Group matchups by year and week
+    weekly_scores = defaultdict(list)
+
+    for matchup in matchups:
+        key = (matchup['year'], matchup['week'])
+        weekly_scores[key].append({
+            'manager': matchup['home_team'],
+            'score': matchup['home_score'],
+            'opponent': matchup['away_team'],
+            'opponent_score': matchup['away_score']
+        })
+        weekly_scores[key].append({
+            'manager': matchup['away_team'],
+            'score': matchup['away_score'],
+            'opponent': matchup['home_team'],
+            'opponent_score': matchup['home_score']
+        })
+
+    worst_bad_beat = None
+
+    for (year, week), scores in weekly_scores.items():
+        # Sort by score descending
+        sorted_scores = sorted(scores, key=lambda x: x['score'], reverse=True)
+
+        if len(sorted_scores) >= 2:
+            first = sorted_scores[0]
+            second = sorted_scores[1]
+
+            # Check if second place lost their matchup
+            if second['score'] < second['opponent_score']:
+                # This is a bad beat
+                if worst_bad_beat is None or second['score'] > worst_bad_beat['score']:
+                    worst_bad_beat = {
+                        'manager': second['manager'],
+                        'score': second['score'],
+                        'year': year,
+                        'week': week,
+                        'opponent': second['opponent'],
+                        'opponent_score': second['opponent_score'],
+                        'top_score': first['score'],
+                        'top_scorer': first['manager']
+                    }
+
+    return worst_bad_beat
 
 
 def calculate_value_over_replacement(all_data: Dict) -> Dict:
@@ -1461,131 +1524,6 @@ def calculate_draft_pick_value(all_data: Dict, vor_data: Dict) -> Dict[str, floa
             draft_values[owner] += vor
 
     return draft_values
-
-
-def summarize_waiver_activity(all_data: Dict, vor_data: Dict) -> Dict[str, Any]:
-    """Summarize waiver/free agent activity and top pickups."""
-
-    owner_shares_by_year = build_player_owner_shares(all_data)
-    player_id_to_name = all_data.get('player_id_to_name', {})
-
-    total_claims = Counter()
-    for counter in all_data['waiver_claims'].values():
-        total_claims.update(counter)
-
-    waiver_add_records: List[Dict[str, Any]] = []
-    for year, records in all_data['waiver_add_records'].items():
-        waiver_add_records.extend([
-            {**rec, 'year': year} if 'year' not in rec else rec
-            for rec in records
-        ])
-
-    waiver_pickups = []
-
-    for record in waiver_add_records:
-        player_key = record.get('player_key')
-        owner = record.get('owner')
-        year = record.get('year')
-        player_name = player_id_to_name.get(player_key, record.get('player_name', player_key))
-
-        tenure_vor = 0.0
-        contributing_years = []
-
-        for candidate_year in YEARS:
-            if candidate_year < year:
-                continue
-            if candidate_year not in vor_data or player_key not in vor_data[candidate_year]:
-                continue
-
-            owner_shares = owner_shares_by_year.get(candidate_year, {}).get(player_key, {})
-            share = owner_shares.get(owner, 0.0)
-            if share <= 0:
-                continue
-
-            tenure_vor += vor_data[candidate_year][player_key]['vor'] * share
-            contributing_years.append(candidate_year)
-
-        if not contributing_years:
-            continue
-
-        waiver_pickups.append({
-            'owner': owner,
-            'player': player_name,
-            'player_key': player_key,
-            'year': year,
-            'tenure_vor': tenure_vor,
-            'seasons_contributing': len(set(contributing_years)),
-            'method': record.get('method', 'ADD')
-        })
-
-    waiver_pickups.sort(key=lambda x: x['tenure_vor'], reverse=True)
-
-    return {
-        'claim_counts': total_claims,
-        'top_adds': waiver_pickups[:5],
-    }
-
-
-def summarize_trade_activity(all_data: Dict, vor_data: Dict) -> Dict[str, Any]:
-    """Summarize trade volume and value transferred."""
-
-    owner_shares_by_year = build_player_owner_shares(all_data)
-    player_id_to_name = all_data.get('player_id_to_name', {})
-
-    trade_counts = Counter()
-    for counter in all_data['trade_counts'].values():
-        trade_counts.update(counter)
-
-    trade_pairs = Counter()
-    for counter in all_data['trade_pairs'].values():
-        trade_pairs.update(counter)
-
-    trade_value_acquired = defaultdict(float)
-    trade_value_lost = defaultdict(float)
-
-    for year, moves in all_data['trade_moves'].items():
-        for move in moves:
-            player_key = move.get('player_key')
-            to_owner = move.get('to_owner')
-            from_owner = move.get('from_owner')
-            player_name = player_id_to_name.get(player_key, move.get('player_name', player_key))
-
-            tenure_vor = 0.0
-            contributing_years = []
-
-            for candidate_year in YEARS:
-                if candidate_year < move.get('year', year):
-                    continue
-                if candidate_year not in vor_data or player_key not in vor_data[candidate_year]:
-                    continue
-
-                owner_shares = owner_shares_by_year.get(candidate_year, {}).get(player_key, {})
-                share = owner_shares.get(to_owner, 0.0)
-                if share <= 0:
-                    continue
-
-                tenure_vor += vor_data[candidate_year][player_key]['vor'] * share
-                contributing_years.append(candidate_year)
-
-            if tenure_vor <= 0:
-                continue
-
-            trade_value_acquired[to_owner] += tenure_vor
-            if from_owner:
-                trade_value_lost[from_owner] += tenure_vor
-
-            move['player_name'] = player_name
-            move['tenure_vor'] = tenure_vor
-            move['seasons_contributing'] = len(set(contributing_years))
-
-    top_pairs = sorted(trade_pairs.items(), key=lambda x: x[1], reverse=True)
-
-    return {
-        'trade_counts': trade_counts,
-        'trade_pairs': top_pairs,
-        'acquired': trade_value_acquired,
-        'lost': trade_value_lost,
-    }
 
 
 def build_draft_capital_lookup(all_data: Dict, vor_data: Dict) -> Dict[int, Dict[str, int]]:
@@ -2063,7 +2001,6 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
     win_pcts = []
     points_against = []
     championships = []
-    playoff_apps = []
 
     for team, stats in sorted(team_stats.items(), key=lambda x: x[1]['total_points_for'], reverse=True):
         teams.append(team)
@@ -2075,7 +2012,6 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
         win_pcts.append(win_pct * 100)
 
         championships.append(stats['championships'])
-        playoff_apps.append(stats['playoff_appearances'])
 
     # Create figure with subplots (3 rows, 3 columns to accommodate Hall of Fame)
     fig = plt.figure(figsize=(20, 16))
@@ -2162,30 +2098,25 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
     cbar = plt.colorbar(scatter, ax=ax4)
     cbar.set_label('Win %', fontsize=9)
 
-    # 5. Championships and Playoff Appearances
+    # 5. Championships
     ax5 = plt.subplot(2, 3, 5)
     x = np.arange(len(teams))
-    width = 0.35
 
-    bars_champ = ax5.bar(x - width/2, championships, width, label='Championships',
+    bars_champ = ax5.bar(x, championships, label='Championships',
                         color='gold', edgecolor='black', linewidth=1.5)
-    bars_playoff = ax5.bar(x + width/2, playoff_apps, width, label='Playoff Appearances',
-                          color='silver', edgecolor='black', linewidth=1.5)
 
     ax5.set_ylabel('Count', fontsize=10, fontweight='bold')
-    ax5.set_title('Championships & Playoff Appearances', fontsize=12, fontweight='bold', pad=10)
+    ax5.set_title('Championships', fontsize=12, fontweight='bold', pad=10)
     ax5.set_xticks(x)
     ax5.set_xticklabels(teams, rotation=45, ha='right', fontsize=8)
-    ax5.legend(fontsize=9)
     ax5.grid(True, axis='y', alpha=0.3)
 
     # Add value labels
-    for bars in [bars_champ, bars_playoff]:
-        for bar in bars:
-            height = bar.get_height()
-            if height > 0:
-                ax5.text(bar.get_x() + bar.get_width()/2., height,
-                        f'{int(height)}', ha='center', va='bottom', fontsize=8)
+    for bar in bars_champ:
+        height = bar.get_height()
+        if height > 0:
+            ax5.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{int(height)}', ha='center', va='bottom', fontsize=8)
 
     # 6. Hall of Fame - Top Player Seasons (spans bottom row)
     if top_players and player_headshots:
@@ -2365,19 +2296,84 @@ def generate_report(all_data: Dict):
                      f"{stats['ties']:2d} ({w_pct:5.1f}%)")
     report.append("")
 
-    # Highest Single Week
-    highest_week_score = 0
-    highest_week_team = None
-    for team, stats in team_stats.items():
-        if stats['weekly_scores']:
-            max_score = max(stats['weekly_scores'])
-            if max_score > highest_week_score:
-                highest_week_score = max_score
-                highest_week_team = team
+    # ========================================
+    # SCORING & MATCHUP AWARDS
+    # ========================================
 
-    report.append(f"💥 HIGHEST SINGLE WEEK: {highest_week_team}")
-    report.append(f"   Score: {highest_week_score:.2f}")
-    report.append("")
+    # Offensive Explosion
+    explosion = find_offensive_explosion(all_data['matchups'])
+    if explosion:
+        report.append(f"💥 OFFENSIVE EXPLOSION (Highest Single Week): {explosion['manager']}")
+        report.append(f"   Score: {explosion['score']:.2f}")
+        report.append(f"   When: {explosion['year']} Week {explosion['week']}")
+        report.append(f"   vs {explosion['opponent']} ({explosion['opponent_score']:.2f})")
+        report.append("")
+
+    # Offensive Dud
+    dud = find_offensive_dud(all_data['matchups'])
+    if dud:
+        report.append(f"💀 OFFENSIVE DUD (Lowest Single Week): {dud['manager']}")
+        report.append(f"   Score: {dud['score']:.2f}")
+        report.append(f"   When: {dud['year']} Week {dud['week']}")
+        report.append(f"   vs {dud['opponent']} ({dud['opponent_score']:.2f})")
+        report.append("")
+
+    # Heartbreaker
+    heartbreaker = calculate_heartbreaker_award(all_data['matchups'])
+    if heartbreaker:
+        report.append(f"💔 HEARTBREAKER (Most Losses by <5 Points): {heartbreaker['manager']}")
+        report.append(f"   Close Losses: {heartbreaker['count']}")
+        if heartbreaker['close_losses']:
+            # Show a few examples
+            report.append("   Recent heartbreaks:")
+            for loss in heartbreaker['close_losses'][-3:]:
+                report.append(f"     {loss['year']} Wk{loss['week']}: Lost {loss['score']:.2f}-{loss['opponent_score']:.2f} "
+                             f"vs {loss['opponent']} (margin: {loss['margin']:.2f})")
+        report.append("")
+
+    # Win and Loss Streaks
+    streaks = calculate_win_loss_streaks(all_data['matchups'])
+    if streaks['longest_win_streak']:
+        ws = streaks['longest_win_streak']
+        report.append(f"🔥 LONGEST WIN STREAK: {ws['manager']}")
+        report.append(f"   {ws['count']} wins in a row")
+        report.append(f"   {ws['start_year']} Week {ws['start_week']} - {ws['end_year']} Week {ws['end_week']}")
+        report.append("")
+
+    if streaks['longest_loss_streak']:
+        ls = streaks['longest_loss_streak']
+        report.append(f"😭 LONGEST LOSING STREAK: {ls['manager']}")
+        report.append(f"   {ls['count']} losses in a row")
+        report.append(f"   {ls['start_year']} Week {ls['start_week']} - {ls['end_year']} Week {ls['end_week']}")
+        report.append("")
+
+    # Unlucky Loser
+    unlucky = calculate_unlucky_loser(all_data['matchups'])
+    if unlucky:
+        report.append(f"😤 UNLUCKY LOSER (Most Points in Losses): {unlucky['manager']}")
+        report.append(f"   Total Points in Losses: {unlucky['total_points_in_losses']:.2f}")
+        report.append(f"   Losses: {unlucky['loss_count']}")
+        report.append(f"   Average Points in Losses: {unlucky['avg_points_in_losses']:.2f}")
+        report.append("")
+
+    # Bad Beat
+    bad_beat = calculate_bad_beat(all_data['matchups'])
+    if bad_beat:
+        report.append(f"🎰 BAD BEAT (2nd Highest Score but Lost): {bad_beat['manager']}")
+        report.append(f"   Score: {bad_beat['score']:.2f}")
+        report.append(f"   When: {bad_beat['year']} Week {bad_beat['week']}")
+        report.append(f"   Lost to {bad_beat['opponent']} ({bad_beat['opponent_score']:.2f})")
+        report.append(f"   Week's top score: {bad_beat['top_scorer']} ({bad_beat['top_score']:.2f})")
+        report.append("")
+
+    # Late Round Legend
+    late_legend = calculate_late_round_legend(all_data, vor_data)
+    if late_legend:
+        report.append(f"💎 LATE ROUND LEGEND (Best Pick Rd 12+): {late_legend['player']}")
+        report.append(f"   Drafted by: {late_legend['manager']}")
+        report.append(f"   {late_legend['year']} - Round {late_legend['round']}, Pick {late_legend['pick']}")
+        report.append(f"   Value Over Replacement: {late_legend['vor']:.2f}")
+        report.append("")
 
     # Punt God Award
     punt_god, punt_god_points, punt_breakdown = calculate_punt_god(all_data)
@@ -2473,6 +2469,10 @@ def generate_report(all_data: Dict):
             report.append(f"     Your record vs them: {vic['record']}")
 
         report.append("")
+
+    # Add head-to-head matrix
+    h2h_matrix = generate_h2h_matrix(h2h_stats)
+    report.extend(h2h_matrix)
 
     # ========================================
     # PLAYER DEEP DIVE
@@ -2617,97 +2617,6 @@ def generate_report(all_data: Dict):
                                              key=lambda x: x[1],
                                              reverse=True), 1):
         report.append(f"  {i:2d}. {team:30s} Total Draft Pick VOR: {value:.2f}")
-    report.append("")
-
-    # ========================================
-    # TRANSACTION SPOTLIGHT
-    # ========================================
-    report.append("=" * 80)
-    report.append("📮 TRANSACTION SPOTLIGHT")
-    report.append("=" * 80)
-    report.append("")
-
-    waiver_summary = summarize_waiver_activity(all_data, vor_data)
-    trade_summary = summarize_trade_activity(all_data, vor_data)
-
-    missing_transactions = [
-        year for year in all_data['leagues']
-        if not all_data['waiver_claims'].get(year) and not all_data['trade_moves'].get(year)
-    ]
-    if missing_transactions:
-        year_text = ', '.join(str(y) for y in sorted(missing_transactions))
-        report.append(f"⚠️ No transactions captured for seasons: {year_text}. Verify league ID and cookies if activity is expected.")
-        report.append("")
-
-    # Waiver claim volume
-    report.append("📬 WAIVER WIRE WARRIOR (Most Claims):")
-    claim_counts = waiver_summary.get('claim_counts', Counter())
-    if claim_counts:
-        for i, (owner, count) in enumerate(claim_counts.most_common(5), 1):
-            report.append(f"  {i:2d}. {owner:30s} {count} claims")
-    else:
-        report.append("  No waiver claims recorded")
-    report.append("")
-
-    # Top waiver/FA pickups by tenure VOR
-    report.append("🔝 TOP 5 WAIVER/FREE AGENT ADDS (Tenure VOR):")
-    top_adds = waiver_summary.get('top_adds', [])
-    if top_adds:
-        for i, add in enumerate(top_adds, 1):
-            report.append(
-                f"  {i:2d}. {add['player']:25s} ({add['year']}) - "
-                f"VOR: {add['tenure_vor']:6.2f} - {add['owner']}"
-            )
-    else:
-        report.append("  No waiver/free agent pickups detected")
-    report.append("")
-
-    # Trade volume
-    report.append("🤪 SICKO (Most Trades):")
-    trade_counts = trade_summary.get('trade_counts', Counter())
-    if trade_counts:
-        for i, (owner, count) in enumerate(trade_counts.most_common(5), 1):
-            report.append(f"  {i:2d}. {owner:30s} {count} trades")
-    else:
-        report.append("  No trades recorded")
-    report.append("")
-
-    # Top trading partners
-    report.append("🤝 BUSINESS PARTNERS (Most Trades Together):")
-    top_pairs = trade_summary.get('trade_pairs', [])
-    if top_pairs:
-        for i, (pair, count) in enumerate(top_pairs[:5], 1):
-            team_a, team_b = pair
-            report.append(f"  {i:2d}. {team_a:20s} & {team_b:20s} - {count} trades")
-    else:
-        report.append("  No paired trades recorded")
-    report.append("")
-
-    # Trade value exchange
-    acquired = trade_summary.get('acquired', {})
-    lost = trade_summary.get('lost', {})
-
-    if acquired:
-        shark, shark_vor = max(acquired.items(), key=lambda x: x[1])
-        report.append(f"🦈 SHARK (Most VOR Acquired via Trades): {shark} - {shark_vor:.2f} VOR")
-    if lost:
-        fish, fish_vor = max(lost.items(), key=lambda x: x[1])
-        report.append(f"🎣 FISH (Most VOR Sent Away via Trades): {fish} - {fish_vor:.2f} VOR")
-    report.append("")
-
-    # ========================================
-    # PLAYOFF SUMMARY
-    # ========================================
-    report.append("=" * 80)
-    report.append("🏈 PLAYOFF SUMMARY")
-    report.append("=" * 80)
-    report.append("")
-
-    report.append("PLAYOFF APPEARANCES:")
-    for i, (team, stats) in enumerate(sorted(team_stats.items(),
-                                             key=lambda x: x[1]['playoff_appearances'],
-                                             reverse=True), 1):
-        report.append(f"  {i:2d}. {team:30s} {stats['playoff_appearances']} appearances")
     report.append("")
 
     # ========================================
