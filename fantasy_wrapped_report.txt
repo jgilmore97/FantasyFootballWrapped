@@ -89,18 +89,18 @@ Draft capital = inverse round (Rd 1 = 15 pts, Rd 15 = 1 pt)
 Keepers ranked by prior year VOR and assigned rounds 1-6
 Undrafted/waiver players excluded
 
-SEASON-ENDING INJURIES DETECTED:
-(Players dropped while injured who never played again that season)
-  Jack Gilmore: Calvin Ridley (2025) - last rostered wk 11, +6 wks credited = +54 pts
-  Jack Gilmore: Jerome Ford (2025) - last rostered wk 3, +14 wks credited = +42 pts
-  Jackson Slaughter: Najee Harris (2025) - last rostered wk 10, +7 wks credited = +7 pts
-  Kilian Nelson: Tyler Bass (2025) - last rostered wk 7, +10 wks credited = +10 pts
-  Nadia Moumine: Sam LaPorta (2025) - last rostered wk 14, +3 wks credited = +21 pts
-  Nadia Moumine: Austin Ekeler (2025) - last rostered wk 3, +14 wks credited = +70 pts
-  Nick Bergeron: James Conner (2025) - last rostered wk 3, +14 wks credited = +14 pts
-  Nick Bergeron: Tyreek Hill (2025) - last rostered wk 6, +11 wks credited = +11 pts
-  Veronica Agne: Justin Fields (2025) - last rostered wk 13, +4 wks credited = +24 pts
-  Veronica Agne: Braelon Allen (2025) - last rostered wk 2, +15 wks credited = +15 pts
+WEIGHTED INJURY SCORE RANKINGS:
+   1. Nadia Moumine                     276 pts lost
+   2. Derek Topper                      269 pts lost
+   3. Kilian Nelson                     215 pts lost
+   4. Jack Gilmore                      210 pts lost
+   5. Veronica Agne                     147 pts lost
+   6. Peter Martino                     144 pts lost
+  7. Soph Nelson                       142 pts lost
+  8. Jackson Slaughter                 126 pts lost
+  9. Maggie Mansfield                   48 pts lost
+ 10. Nick Bergeron                      34 pts lost
+
 
 ================================================================================
 ⚔️  NEMESIS & VICTIMS
@@ -289,13 +289,8 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
   10. Peter Martino                  Total Draft Pick VOR: -598.08
 
 ================================================================================
- CHAMPIONSHIPS & PLAYOFF SUMMARY
+🏈 PLAYOFF SUMMARY
 ================================================================================
-
-CHAMPIONSHIP COUNT:
-  Jack Gilmore                   2 championship(s)
-  Kilian Nelson                  1 championship(s)
-  Jackson Slaughter              1 championship(s)
 
 PLAYOFF APPEARANCES:
    1. Kilian Nelson                  4 appearances

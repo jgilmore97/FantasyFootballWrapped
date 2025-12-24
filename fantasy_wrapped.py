@@ -1846,18 +1846,14 @@ def generate_report(all_data: Dict):
     report.append("")
     
     weighted_injury_data = calculate_weighted_injury_impact(all_data, vor_data)
-    
-    # Season-ending injuries detected
-    season_ending = weighted_injury_data['season_ending']
-    if any(season_ending.values()):
-        report.append("SEASON-ENDING INJURIES DETECTED:")
-        report.append("(Players dropped while injured who never played again that season)")
-        for manager, injuries in sorted(season_ending.items()):
-            for inj in injuries:
-                report.append(f"  {manager}: {inj['player_name']} ({inj['year']}) - "
-                             f"last rostered wk {inj['last_rostered_week']}, "
-                             f"+{inj['remaining_weeks']} wks credited = "
-                             f"+{inj['additional_impact']:.0f} pts")
+
+    weighted_scores = weighted_injury_data['manager_scores']
+    if weighted_scores:
+        report.append("WEIGHTED INJURY SCORE RANKINGS:")
+        for i, (manager, score) in enumerate(sorted(weighted_scores.items(),
+                                                    key=lambda x: x[1],
+                                                    reverse=True), 1):
+            report.append(f"  {i:2d}. {manager:30s} Weighted Injury Score: {score:.0f}")
         report.append("")
 
     # ========================================
@@ -2040,19 +2036,11 @@ def generate_report(all_data: Dict):
     report.append("")
 
     # ========================================
-    # CHAMPIONSHIP & PLAYOFF SUMMARY
+    # PLAYOFF SUMMARY
     # ========================================
     report.append("=" * 80)
-    report.append("🏆 CHAMPIONSHIPS & PLAYOFF SUMMARY")
+    report.append("🏈 PLAYOFF SUMMARY")
     report.append("=" * 80)
-    report.append("")
-
-    report.append("CHAMPIONSHIP COUNT:")
-    for i, (team, stats) in enumerate(sorted(team_stats.items(),
-                                             key=lambda x: x[1]['championships'],
-                                             reverse=True), 1):
-        if stats['championships'] > 0:
-            report.append(f"  {team:30s} {stats['championships']} championship(s)")
     report.append("")
 
     report.append("PLAYOFF APPEARANCES:")
