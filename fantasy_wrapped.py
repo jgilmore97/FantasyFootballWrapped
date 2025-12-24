@@ -606,7 +606,7 @@ def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> List[Dict]:
         for pick in draft['picks']:
             player_name = pick['player_name']
 
-            # Look at production in the draft year and all future years to reward longevity.
+            # Look at production in the draft year and all future years.
             future_years = [
                 y for y in YEARS
                 if y >= year and y in vor_data and player_name in vor_data[y]
@@ -626,12 +626,10 @@ def find_best_draft_picks(all_data: Dict, vor_data: Dict) -> List[Dict]:
             round_num = pick['round'] if pick['round'] else 1
             is_keeper = pick['is_keeper']
 
-            # Reward sustained value across seasons with a small longevity bonus.
-            longevity_bonus = 1 + 0.15 * (len(future_years) - 1)
             if round_num > 0:
-                value_score = (total_future_vor * longevity_bonus) / (round_num if not is_keeper else 1)
+                value_score = total_future_vor / (round_num if not is_keeper else 1)
             else:
-                value_score = total_future_vor * longevity_bonus
+                value_score = total_future_vor
 
             best_picks.append({
                 'year': year,
