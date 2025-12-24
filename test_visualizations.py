@@ -197,8 +197,7 @@ def test_visualizations():
         'win_percentage.png',
         'mvp_panel.png',
         'mvp_5year.png',
-        'luck_analysis.png',
-        'championships.png'
+        'luck_analysis.png'
     ]
 
     for png in expected_pngs:

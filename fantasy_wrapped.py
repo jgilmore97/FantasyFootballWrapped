@@ -2159,36 +2159,7 @@ def create_visualizations(all_data: Dict, mvp_name: str = None, mvp_year: int = 
     print("  ✓ luck_analysis.png")
 
     # ========================================
-    # 5. Championships
-    # ========================================
-    fig, ax = plt.subplots(figsize=(12, 8), facecolor='white')
-
-    x = np.arange(len(teams))
-    bars = ax.bar(x, championships, color=BRAND_COLORS['gold'],
-                  edgecolor='darkgoldenrod', linewidth=2, alpha=0.9)
-
-    ax.set_ylabel('Championship Count', **FONT_LABEL)
-    ax.set_title('Championships Won (2021-2025)', **FONT_TITLE, pad=20)
-    ax.set_xticks(x)
-    ax.set_xticklabels(teams, rotation=45, ha='right', **FONT_TICK)
-    ax.grid(True, axis='y', alpha=0.3, linestyle='--')
-    ax.set_axisbelow(True)
-
-    # Add value labels on top of bars
-    for bar in bars:
-        height = bar.get_height()
-        if height > 0:
-            ax.text(bar.get_x() + bar.get_width()/2., height + 0.05,
-                   f'{int(height)}', ha='center', va='bottom',
-                   fontsize=12, fontweight='bold')
-
-    plt.tight_layout()
-    plt.savefig('championships.png', dpi=300, bbox_inches='tight', facecolor='white')
-    plt.close()
-    print("  ✓ championships.png")
-
-    # ========================================
-    # 6. Hall of Fame - Top Player Seasons
+    # 5. Hall of Fame - Top Player Seasons
     # ========================================
     if top_players and player_headshots:
         fig = plt.figure(figsize=(18, 12), facecolor='white')
@@ -2480,6 +2451,7 @@ def save_comprehensive_json(all_data: Dict, vor_data: Dict) -> None:
         h2h_stats = calculate_head_to_head_stats(all_data['matchups'])
         nemesis_data = calculate_nemesis_and_victims(h2h_stats)
         payload['head_to_head']['nemesis_and_victims'] = nemesis_data
+        payload['head_to_head']['h2h_stats'] = h2h_stats
 
         # ========================================
         # PLAYER ANALYSIS

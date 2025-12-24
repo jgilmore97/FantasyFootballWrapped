@@ -39,7 +39,6 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
         'mvp_panel.png',
         'mvp_5year.png',
         'luck_analysis.png',
-        'championships.png',
         'hall_of_fame.png'
     ]
 
@@ -433,19 +432,6 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
             <h2 class="section-title">🏅 WIN PERCENTAGE RANKINGS</h2>
             <div class="image-container">
                 <img src="data:image/png;base64,{images['win_percentage.png']}" alt="Win Percentage">
-            </div>
-        </div>
-    </section>
-"""
-
-    # Championships Visualization
-    if 'championships.png' in images:
-        html += f"""
-    <section class="section">
-        <div class="container">
-            <h2 class="section-title">👑 CHAMPIONSHIPS</h2>
-            <div class="image-container">
-                <img src="data:image/png;base64,{images['championships.png']}" alt="Championships">
             </div>
         </div>
     </section>
@@ -1014,6 +1000,76 @@ def generate_html_wrapped(json_path: str = 'fantasy_wrapped_data.json',
             </div>
 """
         html += """
+        </div>
+    </section>
+"""
+
+    # Head-to-Head Matrix
+    h2h_stats = h2h_data.get('h2h_stats', {})
+    if h2h_stats:
+        all_managers = sorted(set(h2h_stats.keys()))
+        if all_managers:
+            html += f"""
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">📊 HEAD-TO-HEAD RECORDS MATRIX</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 30px; color: {colors['off_white']};">
+                All-Time Win-Loss-Tie Records
+            </p>
+            <div style="overflow-x: auto;">
+                <table class="rankings-table" style="min-width: 800px;">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+"""
+            for manager in all_managers:
+                # Abbreviate manager names for column headers
+                parts = manager.split()
+                if len(parts) >= 2:
+                    abbrev = f"{parts[0][0]}{parts[-1][:2]}"
+                else:
+                    abbrev = manager[:3]
+                html += f"""                            <th style="text-align: center;">{abbrev}</th>
+"""
+            html += """                        </tr>
+                    </thead>
+                    <tbody>
+"""
+            for i, manager_a in enumerate(all_managers):
+                html += f"""                        <tr>
+                            <td style="font-weight: 700;">{manager_a}</td>
+"""
+                for j, manager_b in enumerate(all_managers):
+                    if manager_a == manager_b:
+                        html += """                            <td style="text-align: center; color: #888;">--</td>
+"""
+                    else:
+                        stats = h2h_stats.get(manager_a, {}).get(manager_b, {})
+                        wins = stats.get('wins', 0)
+                        losses = stats.get('losses', 0)
+                        ties = stats.get('ties', 0)
+                        record = f"{wins}-{losses}"
+                        if ties > 0:
+                            record += f"-{ties}"
+
+                        # Color code based on winning record
+                        if wins > losses:
+                            cell_color = colors['green']
+                        elif wins < losses:
+                            cell_color = colors['red']
+                        else:
+                            cell_color = colors['off_white']
+
+                        html += f"""                            <td style="text-align: center; color: {cell_color}; font-weight: 700;">{record}</td>
+"""
+                html += """                        </tr>
+"""
+            html += """                    </tbody>
+                </table>
+            </div>
+            <p style="text-align: center; font-size: 0.9rem; margin-top: 20px; color: {colors['off_white']};">
+                Records shown as W-L or W-L-T (Wins-Losses-Ties)
+            </p>
         </div>
     </section>
 """
