@@ -290,15 +290,15 @@ def _awards_page(pdf: PdfPages, parsed: ParsedReport):
     fig.patch.set_facecolor(NIGHT_BG)
 
     awards_left = [
-        ("📈 Scoring Leader", parsed.awards.get("scoring_leader", "?")),
-        ("🥇 Best Record", parsed.awards.get("best_record", "?")),
-        ("🍀 Luckiest", parsed.awards.get("luckiest", "?")),
-        ("😬 Unluckiest", parsed.awards.get("unluckiest", "?")),
+        ("Scoring Leader", parsed.awards.get("scoring_leader", "?")),
+        ("Best Record", parsed.awards.get("best_record", "?")),
+        ("Luckiest", parsed.awards.get("luckiest", "?")),
+        ("Unluckiest", parsed.awards.get("unluckiest", "?")),
     ]
     awards_right = [
-        ("🏅 MVP Season", parsed.awards.get("mvp_single", "?")),
-        ("🏆 MVP (5yr Total)", parsed.awards.get("mvp_total", "?")),
-        ("🤒 Most Injured", parsed.awards.get("most_injured", "?")),
+        ("MVP Season", parsed.awards.get("mvp_single", "?")),
+        ("MVP (5yr Total)", parsed.awards.get("mvp_total", "?")),
+        ("Most Injured", parsed.awards.get("most_injured", "?")),
     ]
 
     for ax, col, title in zip(axes, [awards_left, awards_right], ["Core Awards", "Player Buzz"]):
