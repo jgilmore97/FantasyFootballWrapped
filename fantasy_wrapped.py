@@ -1125,43 +1125,6 @@ def calculate_late_round_legend(all_data: Dict, vor_data: Dict) -> Dict:
     return best_late_pick
 
 
-def calculate_unlucky_loser(matchups: List) -> Dict:
-    """
-    Find the manager who scored the most total points in games they lost.
-
-    Returns dict with 'manager', 'total_points_in_losses', 'loss_count'.
-    """
-    points_in_losses = defaultdict(float)
-    loss_counts = defaultdict(int)
-
-    for matchup in matchups:
-        home = matchup['home_team']
-        away = matchup['away_team']
-        home_score = matchup['home_score']
-        away_score = matchup['away_score']
-
-        if home_score < away_score:
-            # Home lost
-            points_in_losses[home] += home_score
-            loss_counts[home] += 1
-        elif away_score < home_score:
-            # Away lost
-            points_in_losses[away] += away_score
-            loss_counts[away] += 1
-
-    if not points_in_losses:
-        return None
-
-    unlucky = max(points_in_losses.items(), key=lambda x: x[1])
-
-    return {
-        'manager': unlucky[0],
-        'total_points_in_losses': unlucky[1],
-        'loss_count': loss_counts[unlucky[0]],
-        'avg_points_in_losses': unlucky[1] / loss_counts[unlucky[0]] if loss_counts[unlucky[0]] > 0 else 0
-    }
-
-
 def calculate_bad_beat(matchups: List) -> Dict:
     """
     Find instances where someone scored 2nd highest in a week but still lost.
@@ -2345,15 +2308,6 @@ def generate_report(all_data: Dict):
         report.append(f"😭 LONGEST LOSING STREAK: {ls['manager']}")
         report.append(f"   {ls['count']} losses in a row")
         report.append(f"   {ls['start_year']} Week {ls['start_week']} - {ls['end_year']} Week {ls['end_week']}")
-        report.append("")
-
-    # Unlucky Loser
-    unlucky = calculate_unlucky_loser(all_data['matchups'])
-    if unlucky:
-        report.append(f"😤 UNLUCKY LOSER (Most Points in Losses): {unlucky['manager']}")
-        report.append(f"   Total Points in Losses: {unlucky['total_points_in_losses']:.2f}")
-        report.append(f"   Losses: {unlucky['loss_count']}")
-        report.append(f"   Average Points in Losses: {unlucky['avg_points_in_losses']:.2f}")
         report.append("")
 
     # Bad Beat
