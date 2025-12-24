@@ -4,6 +4,7 @@ Test Fantasy Football Wrapped with mock data
 """
 
 from collections import defaultdict, Counter
+import os
 import sys
 
 # Mock the espn_api module since we can't connect
@@ -180,7 +181,8 @@ def create_mock_data():
 
 
 # Import the analysis functions from the main script
-sys.path.insert(0, '/home/user/FantasyFootballWrapped')
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, CURRENT_DIR)
 from fantasy_wrapped import (
     calculate_head_to_head_records,
     find_top_rivalries,
