@@ -17,7 +17,7 @@ ALL-TIME SCORING RANKINGS:
    6. Peter Martino                  12955.64 pts
    7. Veronica Agne                  12889.96 pts
    8. Maggie Mansfield               12193.06 pts
-   9. Nadia Moumine                  11955.42 pts
+   9. Nadia/Zoe                      11955.42 pts
   10. Soph Nelson                    11690.30 pts
 
 😬 UNLUCKIEST MANAGER: Derek Topper
@@ -31,7 +31,7 @@ LUCK RANKINGS (Points Against - Lower is Luckier):
    2. Maggie Mansfield               12708.52 pts against
    3. Jack Gilmore                   12732.92 pts against
    4. Jackson Slaughter              12855.26 pts against
-   5. Nadia Moumine                  12895.78 pts against
+   5. Nadia/Zoe                      12895.78 pts against
    6. Veronica Agne                  12900.42 pts against
    7. Peter Martino                  12948.22 pts against
    8. Soph Nelson                    12949.80 pts against
@@ -50,7 +50,7 @@ ALL-TIME WIN PERCENTAGE RANKINGS:
    6. Nick Bergeron                  41-39- 1 ( 51.2%)
    7. Peter Martino                  41-40- 0 ( 50.6%)
    8. Maggie Mansfield               33-46- 0 ( 41.8%)
-   9. Nadia Moumine                  30-49- 0 ( 38.0%)
+   9. Nadia/Zoe                      30-49- 0 ( 38.0%)
   10. Soph Nelson                    26-53- 0 ( 32.9%)
 
 💥 OFFENSIVE EXPLOSION (Highest Single Week): Derek Topper
@@ -61,13 +61,13 @@ ALL-TIME WIN PERCENTAGE RANKINGS:
 💀 OFFENSIVE DUD (Lowest Single Week): Soph Nelson
    Score: 76.92
    When: 2023 Week 9
-   vs Nadia Moumine (160.90)
+   vs Nadia/Zoe (160.90)
 
 💔 HEARTBREAKER (Most Losses by <5 Points): Nick Bergeron
    Close Losses: 8
    Recent heartbreaks:
      2024 Wk1: Lost 144.30-145.54 vs Derek Topper (margin: 1.24)
-     2024 Wk7: Lost 115.78-117.30 vs Nadia Moumine (margin: 1.52)
+     2024 Wk7: Lost 115.78-117.30 vs Nadia/Zoe (margin: 1.52)
      2024 Wk10: Lost 159.18-161.18 vs Derek Topper (margin: 2.00)
 
 🔥 LONGEST WIN STREAK: Peter Martino
@@ -85,21 +85,21 @@ ALL-TIME WIN PERCENTAGE RANKINGS:
    Week's top score: Jack Gilmore (219.10)
 
 🦵 PUNT GOD (Most D/ST, K, P Points): Jack Gilmore
-   Total Special Teams Points: 3420.54
-   Defense/ST: 1652.00 | Kicker: 1254.00 | Punter: 514.54
+   Total Special Teams Points: 3321.54
+   Defense/ST: 1591.00 | Kicker: 1254.00 | Punter: 476.54
 
 ================================================================================
 🩺 INJURY ANALYSIS
 ================================================================================
 
-🤒 MOST INJURED TEAM: Nadia Moumine
+🤒 MOST INJURED TEAM: Nadia/Zoe
    Total Injury-Weeks: 77
    Worst Single Week: 6 injuries
    Frequent Flyer: Patrick Mahomes (15 injury-weeks)
 
 INJURY-WEEK RANKINGS:
-   1. Nadia Moumine                    77 injury-weeks (max 6 in one week)
-   2. Kilian Nelson                    58 injury-weeks (max 4 in one week)
+   1. Nadia/Zoe                        77 injury-weeks (max 6 in one week)
+   2. Kilian Nelson                    73 injury-weeks (max 5 in one week)
    3. Jackson Slaughter                49 injury-weeks (max 3 in one week)
    4. Soph Nelson                      43 injury-weeks (max 3 in one week)
    5. Peter Martino                    41 injury-weeks (max 4 in one week)
@@ -119,8 +119,8 @@ Undrafted/waiver players excluded
 
 WEIGHTED INJURY SCORE RANKINGS:
    1. Derek Topper                   Weighted Injury Score: 266
-   2. Kilian Nelson                  Weighted Injury Score: 193
-   3. Nadia Moumine                  Weighted Injury Score: 177
+   2. Kilian Nelson                  Weighted Injury Score: 208
+   3. Nadia/Zoe                      Weighted Injury Score: 177
    4. Peter Martino                  Weighted Injury Score: 137
    5. Soph Nelson                    Weighted Injury Score: 132
    6. Jack Gilmore                   Weighted Injury Score: 114
@@ -173,7 +173,7 @@ Maggie Mansfield:
      You scored 177.8 pts/game against them (1244.3 total, 7 games)
      Your record vs them: 5-2-0
 
-Nadia Moumine:
+Nadia/Zoe:
   👿 Nemesis: Jack Gilmore
      Scored 176.4 pts/game against you (1763.6 total, 10 games)
      Your record vs them: 4-6-0
@@ -193,7 +193,7 @@ Peter Martino:
   👿 Nemesis: Derek Topper
      Scored 183.3 pts/game against you (1650.0 total, 9 games)
      Your record vs them: 4-5-0
-  🏹 Victim: Nadia Moumine
+  🏹 Victim: Nadia/Zoe
      You scored 173.3 pts/game against them (1386.8 total, 8 games)
      Your record vs them: 7-1-0
 
@@ -223,7 +223,7 @@ LEGEND:
    3. Jackson Slaughter
    4. Kilian Nelson
    5. Maggie Mansfield
-   6. Nadia Moumine
+   6. Nadia/Zoe
    7. Nick Bergeron
    8. Peter Martino
    9. Soph Nelson
@@ -294,7 +294,7 @@ TOP 10 PLAYERS BY 5-YEAR AVERAGE VOR (Min. 2 Seasons):
 
 TOP 10 MOST VALUABLE PLAYER SEASONS:
    1. Cooper Kupp               (2021) - WR   - VOR: 312.50 - Soph Nelson
-   2. Patrick Mahomes           (2022) - QB   - VOR: 304.78 - Nadia Moumine
+   2. Patrick Mahomes           (2022) - QB   - VOR: 304.78 - Nadia/Zoe
    3. Josh Allen                (2022) - QB   - VOR: 282.90 - Jack Gilmore
    4. Josh Allen                (2021) - QB   - VOR: 280.86 - Jack Gilmore
    5. Christian McCaffrey       (2023) - RB   - VOR: 273.70 - Peter Martino
@@ -331,7 +331,7 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
    5. Veronica Agne                  Total Keeper VOR: 2200.66
    6. Maggie Mansfield               Total Keeper VOR: 2200.00
    7. Peter Martino                  Total Keeper VOR: 2199.70
-   8. Nadia Moumine                  Total Keeper VOR: 1763.66
+   8. Nadia/Zoe                      Total Keeper VOR: 1763.66
    9. Nick Bergeron                  Total Keeper VOR: 1743.88
   10. Soph Nelson                    Total Keeper VOR: 1544.48
 
@@ -339,7 +339,7 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
    1. Derek Topper                   Total Draft Pick VOR: 1368.42
    2. Nick Bergeron                  Total Draft Pick VOR: 1313.00
    3. Jack Gilmore                   Total Draft Pick VOR: 1207.96
-   4. Nadia Moumine                  Total Draft Pick VOR: 1100.36
+   4. Nadia/Zoe                      Total Draft Pick VOR: 1100.36
    5. Soph Nelson                    Total Draft Pick VOR: 989.27
    6. Maggie Mansfield               Total Draft Pick VOR: 953.61
    7. Jackson Slaughter              Total Draft Pick VOR: 894.61
@@ -348,5 +348,5 @@ BEST DRAFT PICK BY YEAR (vs Round Average):
   10. Peter Martino                  Total Draft Pick VOR: 391.54
 
 ================================================================================
-Generated on 2025-12-24 12:42:50
+Generated on 2025-12-24 15:04:10
 ================================================================================
